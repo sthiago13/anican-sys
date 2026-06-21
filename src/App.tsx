@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   MantineProvider,
   createTheme,
@@ -17,155 +17,181 @@ import {
   IconHeartHandshake,
   IconActivity,
   IconCash,
-  IconPlus,
 } from '@tabler/icons-react';
 import { Sidebar } from './components/Feature/Sidebar';
-import { PatientTable, type Patient } from './components/Feature/PatientTable';
+import { PacienteTable, type Paciente, type Representante } from './components/Feature/PatientTable';
+import { RegistrationStepper } from './components/Feature/RegistrationStepper';
 import { StatCard } from './components/UI/StatCard';
 import { SearchInput } from './components/UI/SearchInput';
 import { FilterDropdown } from './components/UI/FilterDropdown';
 import { Button } from './components/UI/Button';
-import { Input } from './components/UI/Input';
 import { Login } from './components/Feature/Login';
 
 const theme = createTheme({
   primaryColor: 'orange',
-  fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  headings: {
+    fontFamily: 'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+  },
 });
 
-const INITIAL_PATIENTS: Patient[] = [
+// =============================================
+// Datos mock alineados a Supabase
+// =============================================
+
+const INITIAL_REPRESENTANTES: Representante[] = [
   {
-    id: '1',
-    name: 'Bobby',
-    species: 'Perro',
-    breed: 'Golden Retriever',
-    status: 'Activo',
-    admissionDate: '2026-01-15',
-    lastDonationDate: '150',
+    id: 'rep-1',
+    cedula: 'V-15234567',
+    nombres: 'María del Carmen García',
+    telefono_1: '+58 412-1234567',
+    telefono_2: '+58 241-8901234',
+    residencia: 'Av. Bolívar Norte, Valencia, Carabobo',
   },
   {
-    id: '2',
-    name: 'Luna',
-    species: 'Gato',
-    breed: 'Siamés',
-    status: 'En Tratamiento',
-    admissionDate: '2026-03-10',
-    lastDonationDate: '80',
+    id: 'rep-2',
+    cedula: 'V-18765432',
+    nombres: 'José Luis Rodríguez',
+    telefono_1: '+58 414-7654321',
+    residencia: 'Urb. El Trigal, Valencia, Carabobo',
   },
   {
-    id: '3',
-    name: 'Kira',
-    species: 'Perro',
-    breed: 'Pastor Alemán',
-    status: 'Adoptado',
-    admissionDate: '2025-11-20',
-    lastDonationDate: '200',
+    id: 'rep-3',
+    cedula: 'V-20123456',
+    nombres: 'Ana Beatriz Mendoza',
+    telefono_1: '+58 424-5551234',
+    residencia: 'Sector La Isabelica, Valencia',
   },
   {
-    id: '4',
-    name: 'Toby',
-    species: 'Perro',
-    breed: 'Mestizo',
-    status: 'Activo',
-    admissionDate: '2026-04-02',
+    id: 'rep-4',
+    cedula: 'V-16789012',
+    nombres: 'Carlos Eduardo Pérez',
+    telefono_1: '+58 416-3334567',
+    telefono_2: '+58 241-6667890',
+    residencia: 'Municipio San Diego, Carabobo',
   },
   {
-    id: '5',
-    name: 'Mimi',
-    species: 'Gato',
-    breed: 'Persa',
-    status: 'En Tratamiento',
-    admissionDate: '2026-05-18',
-    lastDonationDate: '50',
+    id: 'rep-5',
+    cedula: 'V-22345678',
+    nombres: 'Luisa Fernanda Torres',
+    telefono_1: '+58 412-9998877',
+    residencia: 'Naguanagua, Carabobo',
+  },
+];
+
+const INITIAL_PACIENTES: Paciente[] = [
+  {
+    id: 'pac-1',
+    id_representante: 'rep-1',
+    nombres: 'Sebastián Alejandro',
+    apellidos: 'García Martínez',
+    fecha_nacimiento: '2019-03-15',
+    diagnostico: 'Leucemia Linfoblástica Aguda',
+    sexo: 'Masculino',
+    estado: 'Activo',
+    representante_nombre: 'María del Carmen García',
+  },
+  {
+    id: 'pac-2',
+    id_representante: 'rep-2',
+    nombres: 'Valentina',
+    apellidos: 'Rodríguez Silva',
+    fecha_nacimiento: '2020-07-22',
+    diagnostico: 'Neuroblastoma',
+    sexo: 'Femenino',
+    estado: 'Activo',
+    representante_nombre: 'José Luis Rodríguez',
+  },
+  {
+    id: 'pac-3',
+    id_representante: 'rep-3',
+    nombres: 'Daniel Enrique',
+    apellidos: 'Mendoza López',
+    fecha_nacimiento: '2017-11-08',
+    diagnostico: 'Linfoma de Hodgkin',
+    sexo: 'Masculino',
+    estado: 'Inactivo',
+    representante_nombre: 'Ana Beatriz Mendoza',
+  },
+  {
+    id: 'pac-4',
+    id_representante: 'rep-4',
+    nombres: 'Camila Sofía',
+    apellidos: 'Pérez Herrera',
+    fecha_nacimiento: '2021-01-30',
+    diagnostico: 'Tumor de Wilms',
+    sexo: 'Femenino',
+    estado: 'Activo',
+    representante_nombre: 'Carlos Eduardo Pérez',
+  },
+  {
+    id: 'pac-5',
+    id_representante: 'rep-5',
+    nombres: 'Mateo Andrés',
+    apellidos: 'Torres Ramírez',
+    fecha_nacimiento: '2018-05-12',
+    diagnostico: 'Osteosarcoma',
+    sexo: 'Masculino',
+    estado: 'Activo',
+    representante_nombre: 'Luisa Fernanda Torres',
   },
 ];
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState('dashboard');
-  const [patients, setPatients] = useState<Patient[]>(INITIAL_PATIENTS);
+  const [pacientes, setPacientes] = useState<Paciente[]>(INITIAL_PACIENTES);
+  const [representantes, setRepresentantes] = useState<Representante[]>(INITIAL_REPRESENTANTES);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('Todos');
 
-  // Form states for adding/editing patients
-  const [formName, setFormName] = useState('');
-  const [formSpecies, setFormSpecies] = useState('');
-  const [formBreed, setFormBreed] = useState('');
-  const [formStatus, setFormStatus] = useState<'Activo' | 'En Tratamiento' | 'Adoptado'>('Activo');
-  const [formDonation, setFormDonation] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
+  // Handle new registration from Stepper
+  const handleRegistrationComplete = (
+    repData: Omit<Representante, 'id' | 'created_at'>,
+    pacData: Omit<Paciente, 'id' | 'id_representante' | 'created_at'>
+  ) => {
+    const newRepId = `rep-${Date.now()}`;
+    const newRep: Representante = {
+      ...repData,
+      id: newRepId,
+      created_at: new Date().toISOString(),
+    };
 
-  const handleAddOrUpdatePatient = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim() || !formSpecies.trim() || !formBreed.trim()) return;
+    const newPac: Paciente = {
+      ...pacData,
+      id: `pac-${Date.now()}`,
+      id_representante: newRepId,
+      representante_nombre: repData.nombres,
+      created_at: new Date().toISOString(),
+    };
 
-    if (editingId) {
-      setPatients(
-        patients.map((p) =>
-          p.id === editingId
-            ? {
-                ...p,
-                name: formName,
-                species: formSpecies,
-                breed: formBreed,
-                status: formStatus,
-                lastDonationDate: formDonation || undefined,
-              }
-            : p
-        )
-      );
-      setEditingId(null);
-    } else {
-      const newPatient: Patient = {
-        id: Date.now().toString(),
-        name: formName,
-        species: formSpecies,
-        breed: formBreed,
-        status: formStatus,
-        admissionDate: new Date().toISOString().split('T')[0],
-        lastDonationDate: formDonation || undefined,
-      };
-      setPatients([newPatient, ...patients]);
-    }
-
-    // Reset form
-    setFormName('');
-    setFormSpecies('');
-    setFormBreed('');
-    setFormStatus('Activo');
-    setFormDonation('');
+    setRepresentantes([newRep, ...representantes]);
+    setPacientes([newPac, ...pacientes]);
   };
 
-  const handleEditPatient = (patient: Patient) => {
-    setEditingId(patient.id);
-    setFormName(patient.name);
-    setFormSpecies(patient.species);
-    setFormBreed(patient.breed);
-    setFormStatus(patient.status);
-    setFormDonation(patient.lastDonationDate || '');
-    setActiveView('pacientes'); // switch view to ensure they see the form
+  const handleDeletePaciente = (id: string) => {
+    if (confirm('¿Estás seguro de que deseas eliminar este paciente del sistema?')) {
+      setPacientes(pacientes.filter((p) => p.id !== id));
+    }
   };
 
-  const handleDeletePatient = (id: string) => {
-    if (confirm('¿Estás seguro de que deseas eliminar este paciente?')) {
-      setPatients(patients.filter((p) => p.id !== id));
-    }
+  const handleEditPaciente = (paciente: Paciente) => {
+    // For now, navigate to registration view (future: pre-fill form)
+    console.log('Editar paciente:', paciente);
+    setActiveView('registro');
   };
 
   // Stats calculation
-  const totalPatients = patients.length;
-  const inTreatment = patients.filter((p) => p.status === 'En Tratamiento').length;
-  const activePatients = patients.filter((p) => p.status === 'Activo').length;
-  const totalDonations = patients.reduce(
-    (acc, p) => acc + (p.lastDonationDate ? parseFloat(p.lastDonationDate) : 0),
-    0
-  );
+  const totalPacientes = pacientes.length;
+  const enTratamiento = pacientes.filter((p) => p.estado === 'Activo').length;
+  const inactivos = pacientes.filter((p) => p.estado === 'Inactivo').length;
+  const totalRepresentantes = representantes.length;
 
   const filterOptions = [
     { value: 'Todos', label: 'Todos' },
     { value: 'Activo', label: 'Activo' },
-    { value: 'En Tratamiento', label: 'En Tratamiento' },
-    { value: 'Adoptado', label: 'Adoptado' },
+    { value: 'Inactivo', label: 'Inactivo' },
+    { value: 'Fallecido', label: 'Fallecido' },
   ];
 
   if (!isAuthenticated) {
@@ -178,55 +204,59 @@ function App() {
 
   return (
     <MantineProvider theme={theme}>
-      <Box style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f8f9fa' }}>
+      <Box style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--anican-bg)' }}>
         {/* Sidebar Nav */}
         <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
         {/* Main Workspace */}
         <Box style={{ flexGrow: 1, padding: 32, maxWidth: 'calc(100% - 260px)' }}>
+
+          {/* =============================================
+              DASHBOARD
+              ============================================= */}
           {activeView === 'dashboard' && (
-            <Stack gap="xl">
+            <Stack gap="xl" className="anican-fade-in">
               <div>
-                <Title order={1} style={{ letterSpacing: -1 }}>
+                <Title order={1} style={{ letterSpacing: -1, color: 'var(--anican-azul-oscuro)' }}>
                   Panel de Control
                 </Title>
-                <Text c="dimmed">Resumen general y KPIs de la fundación Anican</Text>
+                <Text c="dimmed">Resumen general de la Fundación Anican</Text>
               </div>
 
               {/* KPIs Grid */}
               <Grid>
                 <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
                   <StatCard
-                    title="Mascotas Totales"
-                    value={totalPatients}
+                    title="Pacientes Registrados"
+                    value={totalPacientes}
                     icon={<IconUsers size={24} />}
                     trend={{ value: 12, type: 'up' }}
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
                   <StatCard
-                    title="En Tratamiento"
-                    value={inTreatment}
+                    title="Pacientes Activos"
+                    value={enTratamiento}
                     icon={<IconActivity size={24} />}
-                    color="orange"
-                    trend={{ value: 5, type: 'down', label: 'desde la semana pasada' }}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
-                  <StatCard
-                    title="Mascotas Activas"
-                    value={activePatients}
-                    icon={<IconUsers size={24} />}
                     color="teal"
+                    trend={{ value: 8, type: 'up', label: 'este mes' }}
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
                   <StatCard
-                    title="Fondos Recaudados"
-                    value={`$${totalDonations}`}
+                    title="Representantes"
+                    value={totalRepresentantes}
+                    icon={<IconHeartHandshake size={24} />}
+                    color="blue"
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                  <StatCard
+                    title="Pacientes Inactivos"
+                    value={inactivos}
                     icon={<IconCash size={24} />}
-                    color="green"
-                    trend={{ value: 24, type: 'up' }}
+                    color="orange"
+                    trend={{ value: 2, type: 'down', label: 'desde la semana pasada' }}
                   />
                 </Grid.Col>
               </Grid>
@@ -237,237 +267,150 @@ function App() {
               <Card withBorder radius="md" p="lg" shadow="xs">
                 <Group justify="space-between" mb="md">
                   <div>
-                    <Title order={3}>Mascotas Recientes</Title>
+                    <Title order={3} c="var(--anican-azul-oscuro)">Pacientes Recientes</Title>
                     <Text size="sm" c="dimmed">
-                      Últimos pacientes registrados en la base de datos
+                      Últimos pacientes registrados en el sistema
                     </Text>
                   </div>
                   <Button onClick={() => setActiveView('pacientes')}>
                     Ver Todos los Pacientes
                   </Button>
                 </Group>
-                <PatientTable
-                  patients={patients.slice(0, 3)}
+                <PacienteTable
+                  pacientes={pacientes.slice(0, 3)}
                   searchQuery=""
                   filterStatus="Todos"
-                  onEditPatient={handleEditPatient}
-                  onDeletePatient={handleDeletePatient}
+                  onEditPaciente={handleEditPaciente}
+                  onDeletePaciente={handleDeletePaciente}
                 />
               </Card>
             </Stack>
           )}
 
+          {/* =============================================
+              PACIENTES
+              ============================================= */}
           {activeView === 'pacientes' && (
-            <Stack gap="xl">
+            <Stack gap="xl" className="anican-fade-in">
               <Group justify="space-between" align="center">
                 <div>
-                  <Title order={1} style={{ letterSpacing: -1 }}>
+                  <Title order={1} style={{ letterSpacing: -1, color: 'var(--anican-azul-oscuro)' }}>
                     Gestión de Pacientes
                   </Title>
                   <Text c="dimmed">
-                    Registra, edita y filtra la lista de mascotas albergadas
+                    Consulta y administra los pacientes registrados en la fundación
                   </Text>
                 </div>
+                <Button
+                  leftSection={<IconUsers size={16} />}
+                  onClick={() => setActiveView('registro')}
+                >
+                  Nuevo Registro
+                </Button>
               </Group>
 
-              <Grid>
-                {/* Search & Table list (Left side, takes 8 cols) */}
-                <Grid.Col span={{ base: 12, lg: 8 }}>
-                  <Card withBorder radius="md" p="lg" shadow="xs">
-                    <Group justify="space-between" mb="lg">
-                      <Group style={{ flexGrow: 1, maxWidth: 400 }}>
-                        <SearchInput
-                          placeholder="Buscar por nombre, especie..."
-                          onSearchChange={setSearchQuery}
-                          style={{ width: '100%' }}
-                        />
-                      </Group>
-                      <FilterDropdown
-                        label="Estado"
-                        options={filterOptions}
-                        selectedValue={filterStatus}
-                        onSelect={setFilterStatus}
-                      />
-                    </Group>
-
-                    <PatientTable
-                      patients={patients}
-                      searchQuery={searchQuery}
-                      filterStatus={filterStatus}
-                      onEditPatient={handleEditPatient}
-                      onDeletePatient={handleDeletePatient}
+              <Card withBorder radius="md" p="lg" shadow="xs">
+                <Group justify="space-between" mb="lg">
+                  <Group style={{ flexGrow: 1, maxWidth: 400 }}>
+                    <SearchInput
+                      placeholder="Buscar por nombre, diagnóstico..."
+                      onSearchChange={setSearchQuery}
+                      style={{ width: '100%' }}
                     />
-                  </Card>
-                </Grid.Col>
+                  </Group>
+                  <FilterDropdown
+                    label="Estado"
+                    options={filterOptions}
+                    selectedValue={filterStatus}
+                    onSelect={setFilterStatus}
+                  />
+                </Group>
 
-                {/* Registry Form (Right side, takes 4 cols) */}
-                <Grid.Col span={{ base: 12, lg: 4 }}>
-                  <Card withBorder radius="md" p="lg" shadow="xs">
-                    <Title order={3} mb="xs">
-                      {editingId ? 'Editar Paciente' : 'Nuevo Registro'}
-                    </Title>
-                    <Text size="sm" c="dimmed" mb="lg">
-                      {editingId
-                        ? 'Modifica los datos del paciente seleccionado'
-                        : 'Ingresa una nueva mascota al sistema'}
-                    </Text>
-
-                    <form onSubmit={handleAddOrUpdatePatient}>
-                      <Stack gap="md">
-                        <Input
-                          label="Nombre de la Mascota"
-                          placeholder="Ej. Bobby, Luna"
-                          value={formName}
-                          onChange={(e) => setFormName(e.target.value)}
-                          required
-                        />
-
-                        <Input
-                          label="Especie"
-                          placeholder="Ej. Perro, Gato"
-                          value={formSpecies}
-                          onChange={(e) => setFormSpecies(e.target.value)}
-                          required
-                        />
-
-                        <Input
-                          label="Raza"
-                          placeholder="Ej. Mestizo, Criollo"
-                          value={formBreed}
-                          onChange={(e) => setFormBreed(e.target.value)}
-                          required
-                        />
-
-                        <Input
-                          label="Última Donación ($) (Opcional)"
-                          placeholder="Ej. 100"
-                          type="number"
-                          value={formDonation}
-                          onChange={(e) => setFormDonation(e.target.value)}
-                        />
-
-                        {/* Status selector (custom select wrapping input styling) */}
-                        <Box>
-                          <Text fw={600} size="sm" mb={4}>
-                            Estado
-                          </Text>
-                          <select
-                            value={formStatus}
-                            onChange={(e) =>
-                              setFormStatus(
-                                e.target.value as 'Activo' | 'En Tratamiento' | 'Adoptado'
-                              )
-                            }
-                            style={{
-                              width: '100%',
-                              height: '36px',
-                              padding: '0 12px',
-                              borderRadius: '8px',
-                              border: '1px solid var(--mantine-color-gray-4)',
-                              fontFamily: 'inherit',
-                              fontSize: '14px',
-                              backgroundColor: 'white',
-                            }}
-                          >
-                            <option value="Activo">Activo</option>
-                            <option value="En Tratamiento">En Tratamiento</option>
-                            <option value="Adoptado">Adoptado</option>
-                          </select>
-                        </Box>
-
-                        <Group justify="flex-end" mt="md">
-                          {editingId && (
-                            <Button
-                              variant="outline"
-                              color="gray"
-                              onClick={() => {
-                                setEditingId(null);
-                                setFormName('');
-                                setFormSpecies('');
-                                setFormBreed('');
-                                setFormStatus('Activo');
-                                setFormDonation('');
-                              }}
-                            >
-                              Cancelar
-                            </Button>
-                          )}
-                          <Button type="submit" leftSection={<IconPlus size={16} />}>
-                            {editingId ? 'Guardar Cambios' : 'Registrar'}
-                          </Button>
-                        </Group>
-                      </Stack>
-                    </form>
-                  </Card>
-                </Grid.Col>
-              </Grid>
+                <PacienteTable
+                  pacientes={pacientes}
+                  searchQuery={searchQuery}
+                  filterStatus={filterStatus}
+                  onEditPaciente={handleEditPaciente}
+                  onDeletePaciente={handleDeletePaciente}
+                />
+              </Card>
             </Stack>
           )}
 
+          {/* =============================================
+              REGISTRO (STEPPER)
+              ============================================= */}
+          {activeView === 'registro' && (
+            <RegistrationStepper onRegistrationComplete={handleRegistrationComplete} />
+          )}
+
+          {/* =============================================
+              DONACIONES
+              ============================================= */}
           {activeView === 'donaciones' && (
-            <Stack gap="xl">
+            <Stack gap="xl" className="anican-fade-in">
               <div>
-                <Title order={1} style={{ letterSpacing: -1 }}>
+                <Title order={1} style={{ letterSpacing: -1, color: 'var(--anican-azul-oscuro)' }}>
                   Registro de Donaciones
                 </Title>
                 <Text c="dimmed">
-                  Visualiza los aportes económicos y patrocinadores de Anican
+                  Visualiza los aportes recibidos y entregados por la Fundación Anican
                 </Text>
               </div>
 
               <Grid>
                 <Grid.Col span={{ base: 12, md: 6 }}>
                   <StatCard
-                    title="Total Recaudado"
-                    value={`$${totalDonations}`}
+                    title="Donaciones Entregadas"
+                    value="—"
                     icon={<IconCash size={24} />}
                     color="green"
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 6 }}>
                   <StatCard
-                    title="Patrocinadores Activos"
-                    value={patients.filter((p) => p.lastDonationDate).length}
+                    title="Donaciones Recibidas"
+                    value="—"
                     icon={<IconHeartHandshake size={24} />}
-                    color="red"
+                    color="blue"
                   />
                 </Grid.Col>
               </Grid>
 
               <Card withBorder radius="md" p="lg" shadow="xs">
-                <Title order={3} mb="md">
-                  Historial de Aportes
+                <Title order={3} mb="md" c="var(--anican-azul-oscuro)">
+                  Historial de Donaciones
                 </Title>
                 <Table striped highlightOnHover verticalSpacing="sm">
                   <Table.Thead>
                     <Table.Tr>
-                      <Table.Th>Donante (Mascota Vinculada)</Table.Th>
-                      <Table.Th>Monto</Table.Th>
-                      <Table.Th>Fecha Registro</Table.Th>
+                      <Table.Th>Entidad / Paciente</Table.Th>
+                      <Table.Th>Tipo</Table.Th>
+                      <Table.Th>Fecha</Table.Th>
+                      <Table.Th>Observaciones</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
-                    {patients
-                      .filter((p) => p.lastDonationDate)
-                      .map((p) => (
-                        <Table.Tr key={p.id}>
-                          <Table.Td fw={600}>{p.name}</Table.Td>
-                          <Table.Td c="green" fw={700}>
-                            ${p.lastDonationDate}
-                          </Table.Td>
-                          <Table.Td>{p.admissionDate}</Table.Td>
-                        </Table.Tr>
-                      ))}
+                    <Table.Tr>
+                      <Table.Td colSpan={4}>
+                        <Text ta="center" py="xl" c="dimmed">
+                          Las donaciones se conectarán con las tablas de Supabase próximamente.
+                        </Text>
+                      </Table.Td>
+                    </Table.Tr>
                   </Table.Tbody>
                 </Table>
               </Card>
             </Stack>
           )}
 
+          {/* =============================================
+              CONFIGURACIÓN
+              ============================================= */}
           {activeView === 'configuracion' && (
-            <Stack gap="xl">
+            <Stack gap="xl" className="anican-fade-in">
               <div>
-                <Title order={1} style={{ letterSpacing: -1 }}>
+                <Title order={1} style={{ letterSpacing: -1, color: 'var(--anican-azul-oscuro)' }}>
                   Configuración del Sistema
                 </Title>
                 <Text c="dimmed">Ajustes generales del panel administrativo de Anican</Text>
@@ -475,19 +418,20 @@ function App() {
 
               <Card withBorder radius="md" p="lg" shadow="xs">
                 <Stack gap="md">
-                  <Title order={4}>Preferencias Generales</Title>
+                  <Title order={4} c="var(--anican-azul-oscuro)">Preferencias Generales</Title>
                   <Text size="sm" c="dimmed">
-                    El sistema está configurado en español con soporte multiespecie (perros y gatos).
+                    El sistema está configurado en español. Gestión de pacientes pediátricos
+                    oncológicos y sus representantes legales.
                   </Text>
                   <Divider />
                   <Group justify="space-between">
                     <div>
-                      <Text fw={600}>Tema del Sistema</Text>
+                      <Text fw={600} c="var(--anican-azul-oscuro)">Tema del Sistema</Text>
                       <Text size="xs" c="dimmed">
                         Cambiar la apariencia de la interfaz
                       </Text>
                     </div>
-                    <Button variant="outline" color="orange" disabled>
+                    <Button variant="outline" color="gray" disabled>
                       Tema Claro (Predeterminado)
                     </Button>
                   </Group>

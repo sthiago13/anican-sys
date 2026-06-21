@@ -27,7 +27,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       p="md"
       radius="md"
       shadow="xs"
-      className="stat-card-hover"
+      className="anican-card-hover"
       style={{
         position: 'relative',
         overflow: 'hidden',

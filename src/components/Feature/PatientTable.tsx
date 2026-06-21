@@ -3,85 +3,109 @@ import { Table, Badge, Group, Text, Tooltip } from '@mantine/core';
 import { IconPencil, IconTrash } from '@tabler/icons-react';
 import { IconButton } from '../UI/IconButton';
 
-export interface Patient {
+// Interface alineada a la tabla `pacientes` de Supabase
+export interface Paciente {
   id: string;
-  name: string;
-  species: string;
-  breed: string;
-  status: 'Activo' | 'En Tratamiento' | 'Adoptado';
-  lastDonationDate?: string;
-  admissionDate: string;
+  id_representante?: string;
+  nombres: string;
+  apellidos: string;
+  fecha_nacimiento: string;
+  diagnostico?: string;
+  sexo?: string;
+  estado: 'Activo' | 'Fallecido' | 'Inactivo';
+  created_at?: string;
+  // Joined data from representante (optional, for display)
+  representante_nombre?: string;
 }
 
-export interface PatientTableProps {
-  patients: Patient[];
+// Interface alineada a la tabla `representantes` de Supabase
+export interface Representante {
+  id: string;
+  cedula: string;
+  nombres: string;
+  telefono_1?: string;
+  telefono_2?: string;
+  residencia?: string;
+  created_at?: string;
+}
+
+export interface PacienteTableProps {
+  pacientes: Paciente[];
   searchQuery: string;
   filterStatus: string;
-  onEditPatient?: (patient: Patient) => void;
-  onDeletePatient?: (id: string) => void;
+  onEditPaciente?: (paciente: Paciente) => void;
+  onDeletePaciente?: (id: string) => void;
 }
 
-export const PatientTable: React.FC<PatientTableProps> = ({
-  patients,
+export const PacienteTable: React.FC<PacienteTableProps> = ({
+  pacientes,
   searchQuery,
   filterStatus,
-  onEditPatient,
-  onDeletePatient,
+  onEditPaciente,
+  onDeletePaciente,
 }) => {
-  // Filter patients based on query and status filter
-  const filteredPatients = patients.filter((patient) => {
+  // Filter based on search query and status
+  const filteredPacientes = pacientes.filter((paciente) => {
+    const fullName = `${paciente.nombres} ${paciente.apellidos}`.toLowerCase();
     const matchesSearch =
-      patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.breed.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      patient.species.toLowerCase().includes(searchQuery.toLowerCase());
+      fullName.includes(searchQuery.toLowerCase()) ||
+      (paciente.diagnostico || '').toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus =
-      filterStatus === 'Todos' || patient.status === filterStatus;
+      filterStatus === 'Todos' || paciente.estado === filterStatus;
 
     return matchesSearch && matchesStatus;
   });
 
-  const getStatusColor = (status: Patient['status']) => {
-    switch (status) {
+  const getStatusColor = (estado: Paciente['estado']) => {
+    switch (estado) {
       case 'Activo':
         return 'teal';
-      case 'En Tratamiento':
+      case 'Fallecido':
+        return 'gray';
+      case 'Inactivo':
         return 'orange';
-      case 'Adoptado':
-        return 'blue';
       default:
         return 'gray';
     }
   };
 
-  const rows = filteredPatients.map((patient) => (
-    <Table.Tr key={patient.id}>
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('es-VE', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const rows = filteredPacientes.map((paciente) => (
+    <Table.Tr key={paciente.id}>
       <Table.Td>
-        <Text fw={600} size="sm">
-          {patient.name}
+        <Text fw={600} size="sm" c="var(--anican-azul-oscuro)">
+          {paciente.nombres} {paciente.apellidos}
         </Text>
       </Table.Td>
       <Table.Td>
-        <Text size="sm">{patient.species}</Text>
+        <Text size="sm">{paciente.diagnostico || '—'}</Text>
       </Table.Td>
       <Table.Td>
-        <Text size="sm" c="dimmed">
-          {patient.breed}
-        </Text>
+        <Text size="sm" c="dimmed">{paciente.sexo || '—'}</Text>
       </Table.Td>
       <Table.Td>
-        <Badge color={getStatusColor(patient.status)} variant="light" radius="sm">
-          {patient.status}
+        <Text size="sm" c="dimmed">{formatDate(paciente.fecha_nacimiento)}</Text>
+      </Table.Td>
+      <Table.Td>
+        <Badge color={getStatusColor(paciente.estado)} variant="light" radius="sm">
+          {paciente.estado}
         </Badge>
       </Table.Td>
       <Table.Td>
         <Text size="sm" c="dimmed">
-          {patient.admissionDate}
-        </Text>
-      </Table.Td>
-      <Table.Td>
-        <Text size="sm">
-          {patient.lastDonationDate ? `$${patient.lastDonationDate}` : 'N/A'}
+          {paciente.representante_nombre || '—'}
         </Text>
       </Table.Td>
       <Table.Td>
@@ -91,7 +115,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               <IconButton
                 icon={<IconPencil size={16} stroke={1.5} />}
                 color="blue"
-                onClick={() => onEditPatient && onEditPatient(patient)}
+                onClick={() => onEditPaciente && onEditPaciente(paciente)}
               />
             </div>
           </Tooltip>
@@ -100,7 +124,7 @@ export const PatientTable: React.FC<PatientTableProps> = ({
               <IconButton
                 icon={<IconTrash size={16} stroke={1.5} />}
                 color="red"
-                onClick={() => onDeletePatient && onDeletePatient(patient.id)}
+                onClick={() => onDeletePaciente && onDeletePaciente(paciente.id)}
               />
             </div>
           </Tooltip>
@@ -114,12 +138,12 @@ export const PatientTable: React.FC<PatientTableProps> = ({
       <Table striped highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Nombre</Table.Th>
-            <Table.Th>Especie</Table.Th>
-            <Table.Th>Raza</Table.Th>
+            <Table.Th>Paciente</Table.Th>
+            <Table.Th>Diagnóstico</Table.Th>
+            <Table.Th>Sexo</Table.Th>
+            <Table.Th>Fecha Nac.</Table.Th>
             <Table.Th>Estado</Table.Th>
-            <Table.Th>Fecha Ingreso</Table.Th>
-            <Table.Th>Última Donación</Table.Th>
+            <Table.Th>Representante</Table.Th>
             <Table.Th>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
