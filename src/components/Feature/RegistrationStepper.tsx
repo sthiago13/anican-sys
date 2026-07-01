@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import React, { useState } from "react";
 import {
   Stepper,
   TextInput,
@@ -15,6 +16,8 @@ import {
   Grid,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
+} from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import {
   IconUser,
   IconStethoscope,
@@ -27,15 +30,15 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "../UI/Button";
 import type { Representante, Paciente } from "./PatientTable";
+import { supabase } from "../../config/supabase";
 
 import "@mantine/dates/styles.css";
 
 export interface RegistrationStepperProps {
   onRegistrationComplete: (
-    representante: Omit<Representante, "id" | "created_at">,
-    paciente: Omit<Paciente, "id" | "id_representante" | "created_at">,
-  ) => Promise<boolean>;
-  onSuccessRedirect?: () => void;
+    representante: Representante,
+    paciente: Paciente,
+  ) => void;
 }
 
 export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
@@ -44,8 +47,8 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
 }) => {
   const [active, setActive] = useState(0);
   const [success, setSuccess] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Paso 1: Representante (alineado a tabla `representantes`)
   const [cedula, setCedula] = useState("");
@@ -101,66 +104,121 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
   };
 
   const handleSubmit = async () => {
-    setSubmitError(null);
-    setIsSubmitting(true);
+    setError(null);
+    setLoading(true);
 
-    const representanteData: Omit<Representante, "id" | "created_at"> = {
+    const representanteData = {
       cedula: cedula.trim(),
       nombres: repNombres.trim(),
-      telefono_1: telefono1.trim() || undefined,
-      telefono_2: telefono2.trim() || undefined,
-      residencia: residencia.trim() || undefined,
+      telefono_1: telefono1.trim() || null,
+      telefono_2: telefono2.trim() || null,
+      residencia: residencia.trim() || null,
     };
 
-    const pacienteData: Omit<
-      Paciente,
-      "id" | "id_representante" | "created_at"
-    > = {
-      nombres: pacNombres.trim(),
-      apellidos: pacApellidos.trim(),
-      fecha_nacimiento: fechaNacimiento
-        ? fechaNacimiento.toISOString().split("T")[0]
-        : "",
-      diagnostico: diagnostico.trim() || undefined,
-      sexo: sexo || undefined,
-      estado: (estado as Paciente["estado"]) || "Activo",
-    };
+    let insertedRep: Representante | null = null;
 
     try {
-      const isSuccess = await onRegistrationComplete(
-        representanteData,
-        pacienteData,
-      );
-      if (isSuccess) {
-        setSuccess(true);
-        setTimeout(() => {
-          setActive(0);
-          setSuccess(false);
-          setCedula("");
-          setRepNombres("");
-          setTelefono1("");
-          setTelefono2("");
-          setResidencia("");
-          setPacNombres("");
-          setPacApellidos("");
-          setFechaNacimiento(null);
-          setDiagnostico("");
-          setSexo(null);
-          setEstado("Activo");
-          if (onSuccessRedirect) {
-            onSuccessRedirect();
-          }
-        }, 3000);
-      } else {
-        setSubmitError(
-          "Ocurrió un error al persistir la información. Verifica la conexión con Supabase.",
+      // Tarea 1: Insertar en representantes y capturar el id
+      const { data: repData, error: repError } = await supabase
+        .from("representantes")
+        .insert([representanteData])
+        .select()
+        .single();
+
+      if (repError) {
+        throw new Error(
+          `Error al registrar el representante: ${repError.message}`,
         );
       }
-    } catch (err) {
-      console.error(err);
-      setSubmitError("Ocurrió un error inesperado al procesar el registro.");
+
+      if (!repData) {
+        throw new Error(
+          "No se recibió la confirmación del representante registrado.",
+        );
+      }
+
+      insertedRep = repData as Representante;
+
+      // Tarea 2: Insertar en pacientes usando el id del representante
+      const fechaNacStr = fechaNacimiento
+        ? fechaNacimiento.toISOString().split("T")[0]
+        : "";
+      const pacienteData = {
+        nombres: pacNombres.trim(),
+        apellidos: pacApellidos.trim(),
+        fecha_nacimiento: fechaNacStr,
+        diagnostico: diagnostico.trim() || null,
+        sexo: sexo || null,
+        estado: estado || "Activo",
+        id_representante: insertedRep.id,
+      };
+
+      const { data: pacData, error: pacError } = await supabase
+        .from("pacientes")
+        .insert([pacienteData])
+        .select()
+        .single();
+
+      if (pacError) {
+        throw pacError;
+      }
+
+      if (!pacData) {
+        throw new Error(
+          "No se recibió la confirmación del paciente registrado.",
+        );
+      }
+      setSuccess(true);
+
+      const newPac: Paciente = {
+        ...pacData,
+        representante_nombre: insertedRep.nombres,
+      } as Paciente;
+
+      const finalRep = insertedRep;
+
+      // Limpiar estados y notificar éxito tras un delay de 2 segundos (2000ms)
+      setTimeout(() => {
+        setActive(0);
+        setSuccess(false);
+        setCedula("");
+        setRepNombres("");
+        setTelefono1("");
+        setTelefono2("");
+        setResidencia("");
+        setPacNombres("");
+        setPacApellidos("");
+        setFechaNacimiento(null);
+        setDiagnostico("");
+        setSexo(null);
+        setEstado("Activo");
+
+        onRegistrationComplete(finalRep, newPac);
+      }, 2000);
+    } catch (err: unknown) {
+      console.error("Error en el proceso de registro:", err);
+
+      if (insertedRep && insertedRep.id) {
+        try {
+          await supabase
+            .from("representantes")
+            .delete()
+            .eq("id", insertedRep.id);
+        } catch (cleanupErr) {
+          console.error(
+            "Error al limpiar el representante huérfano:",
+            cleanupErr,
+          );
+        }
+      }
+
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Ocurrió un error inesperado al guardar los datos.";
+      setError(errorMessage);
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -213,6 +271,19 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
           Registra un representante y su paciente en el sistema Anican
         </Text>
       </div>
+
+      {error && (
+        <Alert
+          icon={<IconAlertCircle size={16} />}
+          title="Error en el Registro"
+          color="red"
+          variant="light"
+          withCloseButton
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
 
       <Card withBorder radius="md" p="xl" shadow="sm">
         <Stepper
@@ -661,19 +732,21 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             variant="outline"
             color="gray"
             onClick={handleBack}
-            disabled={active === 0 || isSubmitting}
+            disabled={active === 0 || loading}
           >
             Anterior
           </Button>
 
           {active < 2 ? (
-            <Button onClick={handleNext}>Siguiente</Button>
+            <Button onClick={handleNext} disabled={loading}>
+              Siguiente
+            </Button>
           ) : (
             <Button
               color="teal"
-              leftSection={<IconCheck size={16} />}
+              leftSection={!loading && <IconCheck size={16} />}
               onClick={handleSubmit}
-              loading={isSubmitting}
+              loading={loading}
             >
               Confirmar Registro
             </Button>
