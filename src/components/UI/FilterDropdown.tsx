@@ -1,13 +1,15 @@
 import React from 'react';
-import { Menu, Button, Group } from '@mantine/core';
+import { Menu, Group } from '@mantine/core';
 import { IconFilter, IconChevronDown } from '@tabler/icons-react';
-
+import { IconButton } from './IconButton';
+import {Button} from './Button';
 export interface FilterOption {
   value: string;
   label: string;
 }
 
 export interface FilterDropdownProps {
+  buttonType?: typeof IconButton | typeof Button,  
   label: string;
   options: FilterOption[];
   selectedValue: string;
@@ -16,6 +18,7 @@ export interface FilterDropdownProps {
 }
 
 export const FilterDropdown: React.FC<FilterDropdownProps> = ({
+  buttonType: ButtonComponent = Button,
   label,
   options,
   selectedValue,
@@ -27,23 +30,30 @@ export const FilterDropdown: React.FC<FilterDropdownProps> = ({
   return (
     <Menu shadow="md" width={200} transitionProps={{ transition: 'pop-top-right', duration: 150 }}>
       <Menu.Target>
-        <Button
-          variant="outline"
-          color="orange"
-          radius="md"
-          leftSection={icon}
-          rightSection={<IconChevronDown size={14} stroke={1.5} />}
-          styles={{
-            root: {
-              fontWeight: 500,
-            },
-          }}
-        >
-          <Group gap={4}>
-            <span>{label}:</span>
-            <span style={{ fontWeight: 600 }}>{selectedOption?.label || 'Todos'}</span>
-          </Group>
-        </Button>
+        {ButtonComponent === IconButton ? (
+          <IconButton
+            icon={icon}
+            color="orange"
+          />
+        ) : (
+          <Button
+            variant="outline"
+            color="orange"
+            radius="md"
+            leftSection={icon}
+            rightSection={<IconChevronDown size={14} stroke={1.5} />}
+            styles={{
+              root: {
+                fontWeight: 500,
+              },
+            }}
+          >
+            <Group gap={4}>
+              <span>{label}:</span>
+              <span style={{ fontWeight: 600 }}>{selectedOption?.label || 'Todos'}</span>
+            </Group>
+          </Button>
+        )}
       </Menu.Target>
 
       <Menu.Dropdown>

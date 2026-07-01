@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../../config/supabase";
-import { type Paciente, type Representante } from "../components/PatientTable";
+import { type Paciente, type Representante } from "../types";
 
 interface DbPaciente {
   id: string;
@@ -82,30 +82,88 @@ export function usePatients() {
     void fetchData();
   }, []);
 
-  const handleDeletePaciente = async (id: string) => {
-    if (
-      confirm("¿Estás seguro de que deseas eliminar este paciente del sistema?")
-    ) {
-      try {
-        setLoading(true);
-        const { error: deleteError } = await supabase
-          .from("pacientes")
-          .delete()
-          .eq("id", id);
+  const handleUpdateStatus = async (id: string, nuevoEstado: Paciente["estado"]) => {
+    try {
+      setLoading(true);
+      const { error: updateError } = await supabase
+        .from("pacientes")
+        .update({ estado: nuevoEstado })
+        .eq("id", id);
 
-        if (deleteError) throw deleteError;
+      if (updateError) throw updateError;
 
-        setPacientes((prev) => prev.filter((p) => p.id !== id));
-      } catch (err: unknown) {
-        console.error("Error al eliminar paciente:", err);
-        alert(
-          err instanceof Error
-            ? `Error al eliminar: ${err.message}`
-            : "No se pudo eliminar el paciente.",
-        );
-      } finally {
-        setLoading(false);
-      }
+      setPacientes((prev) =>
+        prev.map((p) => (p.id === id ? { ...p, estado: nuevoEstado } : p))
+      );
+    } catch (err: unknown) {
+      console.error("Error al actualizar estado del paciente:", err);
+      alert(
+        err instanceof Error
+          ? `Error al actualizar estado: ${err.message}`
+          : "No se pudo actualizar el estado del paciente.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdatePaciente = async (
+    pacienteId: string,
+    pacienteData: {
+      nombres: string;
+      apellidos: string;
+      fecha_nacimiento: string;
+      diagnostico?: string;
+      sexo?: string;
+      estado: Paciente["estado"];
+    },
+    representanteId: string,
+    representanteData: {
+      cedula: string;
+      nombres: string;
+      telefono_1?: string;
+      telefono_2?: string;
+      residencia?: string;
+    }
+  ) => {
+    try {
+      setLoading(true);
+      // 1. Actualizar representante
+      const { error: repError } = await supabase
+        .from("representantes")
+        .update({
+          cedula: representanteData.cedula.trim(),
+          nombres: representanteData.nombres.trim(),
+          telefono_1: representanteData.telefono_1?.trim() || null,
+          telefono_2: representanteData.telefono_2?.trim() || null,
+          residencia: representanteData.residencia?.trim() || null,
+        })
+        .eq("id", representanteId);
+
+      if (repError) throw repError;
+
+      // 2. Actualizar paciente
+      const { error: pacError } = await supabase
+        .from("pacientes")
+        .update({
+          nombres: pacienteData.nombres.trim(),
+          apellidos: pacienteData.apellidos.trim(),
+          fecha_nacimiento: pacienteData.fecha_nacimiento,
+          diagnostico: pacienteData.diagnostico?.trim() || null,
+          sexo: pacienteData.sexo || null,
+          estado: pacienteData.estado,
+        })
+        .eq("id", pacienteId);
+
+      if (pacError) throw pacError;
+
+      // 3. Recargar datos localmente
+      await fetchData();
+    } catch (err: unknown) {
+      console.error("Error al actualizar paciente/representante:", err);
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -113,8 +171,10 @@ export function usePatients() {
     pacientes,
     representantes,
     loading,
-    handleDeletePaciente,
+    handleUpdateStatus,
+    handleUpdatePaciente,
     setPacientes,
     setRepresentantes,
   };
 }
+

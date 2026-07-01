@@ -1,48 +1,41 @@
 import React, { useState } from 'react';
-import { Table, Badge, Group, Text, Tooltip, Anchor, Modal, Stack, Divider, Box, ThemeIcon } from '@mantine/core';
+import { Table, Badge, Group, Text, Tooltip, Anchor } from '@mantine/core';
 import {
   IconPencil,
-  IconTrash,
-  IconId,
-  IconPhone,
-  IconMapPin,
-  IconUser,
+  IconActivity,
 } from '@tabler/icons-react';
 import { IconButton } from '../../../components/UI/IconButton';
-
-// Interface alineada a la tabla `pacientes` de Supabase
-export interface Paciente {
-  id: string;
-  id_representante?: string;
-  nombres: string;
-  apellidos: string;
-  fecha_nacimiento: string;
-  diagnostico?: string;
-  sexo?: string;
-  estado: 'Activo' | 'Fallecido' | 'Inactivo';
-  created_at?: string;
-  // Joined data from representante (optional, for display)
-  representante_nombre?: string;
-}
-
-// Interface alineada a la tabla `representantes` de Supabase
-export interface Representante {
-  id: string;
-  cedula: string;
-  nombres: string;
-  telefono_1?: string;
-  telefono_2?: string;
-  residencia?: string;
-  created_at?: string;
-}
+import { RepresentanteInfoModal } from './RepresentanteInfoModal';
+import { EditPatientModal } from './EditPatientModal';
+import { type Paciente, type Representante } from '../types';
+import { formatDate } from '../../../utils/date';
+import { FilterDropdown } from '../../../components/UI/FilterDropdown';
 
 export interface PacienteTableProps {
   pacientes: Paciente[];
   representantes: Representante[];
   searchQuery: string;
   filterStatus: string;
-  onEditPaciente?: (paciente: Paciente) => void;
-  onDeletePaciente?: (id: string) => void;
+  onUpdateStatus?: (id: string, estado: Paciente['estado']) => void;
+  onUpdatePaciente?: (
+    pacienteId: string,
+    pacienteData: {
+      nombres: string;
+      apellidos: string;
+      fecha_nacimiento: string;
+      diagnostico?: string;
+      sexo?: string;
+      estado: Paciente["estado"];
+    },
+    representanteId: string,
+    representanteData: {
+      cedula: string;
+      nombres: string;
+      telefono_1?: string;
+      telefono_2?: string;
+      residencia?: string;
+    }
+  ) => Promise<void>;
 }
 
 export const PacienteTable: React.FC<PacienteTableProps> = ({
@@ -50,12 +43,13 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
   representantes,
   searchQuery,
   filterStatus,
-  onEditPaciente,
-  onDeletePaciente,
+  onUpdateStatus,
+  onUpdatePaciente
 }) => {
-  const [selectedRepresentante, setSelectedRepresentante] = useState<Representante | null>(null);
+  const [editModalOpened, setEditModalOpened] = useState(false);
+  const [selectedPaciente, setSelectedPaciente] = useState<Paciente | null>(null);
+  const [selectedRepInfo, setSelectedRepInfo] = useState<Representante | null>(null);
   const [modalOpened, setModalOpened] = useState(false);
-  // Filter based on search query and status
   const filteredPacientes = pacientes.filter((paciente) => {
     const fullName = `${paciente.nombres} ${paciente.apellidos}`.toLowerCase();
     const matchesSearch =
@@ -68,6 +62,15 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
     return matchesSearch && matchesStatus;
   });
 
+  const handleEditPaciente = (paciente: Paciente) => {
+    setSelectedPaciente(paciente);
+    setEditModalOpened(true);
+  };
+
+  const selectedRepresentante = selectedPaciente
+    ? representantes.find((r) => r.id === selectedPaciente.id_representante) || null
+    : null;
+
   const getStatusColor = (estado: Paciente['estado']) => {
     switch (estado) {
       case 'Activo':
@@ -78,18 +81,6 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
         return 'orange';
       default:
         return 'gray';
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString('es-VE', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      });
-    } catch {
-      return dateStr;
     }
   };
 
@@ -125,7 +116,7 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
               fw={600}
               color="orange"
               onClick={() => {
-                setSelectedRepresentante(rep);
+                setSelectedRepInfo(rep);
                 setModalOpened(true);
               }}
               style={{
@@ -148,18 +139,24 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
               <IconButton
                 icon={<IconPencil size={16} stroke={1.5} />}
                 color="blue"
-                onClick={() => onEditPaciente && onEditPaciente(paciente)}
+                onClick={() => handleEditPaciente(paciente)}
               />
             </div>
           </Tooltip>
-          <Tooltip label="Eliminar Paciente">
-            <div>
-              <IconButton
-                icon={<IconTrash size={16} stroke={1.5} />}
-                color="red"
-                onClick={() => onDeletePaciente && onDeletePaciente(paciente.id)}
-              />
-            </div>
+          <Tooltip label="Cambiar Estado">
+            <FilterDropdown 
+             icon={<IconActivity size={16} stroke={1.5} />}
+              buttonType={IconButton}
+              label="Estado"
+              options={[
+                { value: "Activo", label: "Activo" },
+                { value: "Inactivo", label: "Inactivo" },
+                { value: "Fallecido", label: "Fallecido" },
+              ]}
+              selectedValue={paciente.estado}
+              onSelect={(value) => onUpdateStatus && onUpdateStatus(paciente.id, value as Paciente['estado'])}  
+            />
+           
           </Tooltip>
         </Group>
       </Table.Td>
@@ -195,101 +192,21 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
           )}
         </Table.Tbody>
       </Table>
-      
-      <Modal
+      <EditPatientModal
+              opened={editModalOpened}
+              onClose={() => {
+                setEditModalOpened(false);
+                setSelectedPaciente(null);
+              }}
+              paciente={selectedPaciente}
+              representante={selectedRepresentante}
+              onSave={onUpdatePaciente || (async () => {})}
+            />
+      <RepresentanteInfoModal
         opened={modalOpened}
         onClose={() => setModalOpened(false)}
-        title={
-          <Group gap="xs">
-            <ThemeIcon color="orange" size="md" radius="md">
-              <IconUser size={18} />
-            </ThemeIcon>
-            <Text fw={700} size="lg" c="var(--anican-azul-oscuro)">
-              Ficha del Representante Legal
-            </Text>
-          </Group>
-        }
-        centered
-        radius="md"
-        size="md"
-        overlayProps={{
-          backgroundOpacity: 0.55,
-          blur: 3,
-        }}
-        transitionProps={{ transition: 'fade', duration: 200 }}
-      >
-        {selectedRepresentante && (
-          <Stack gap="md" py="xs">
-            <Text size="sm" c="dimmed">
-              Información de contacto y residencia registrada del tutor legal.
-            </Text>
-            
-            <Divider color="var(--anican-border)" />
-
-            <Group gap="md" align="flex-start" wrap="nowrap">
-              <ThemeIcon variant="light" color="blue" size="lg" radius="md">
-                <IconUser size={20} />
-              </ThemeIcon>
-              <Box>
-                <Text size="xs" c="dimmed" fw={500}>Nombres Completos</Text>
-                <Text fw={600} size="md" c="var(--anican-azul-oscuro)">
-                  {selectedRepresentante.nombres}
-                </Text>
-              </Box>
-            </Group>
-
-            <Group gap="md" align="flex-start" wrap="nowrap">
-              <ThemeIcon variant="light" color="blue" size="lg" radius="md">
-                <IconId size={20} />
-              </ThemeIcon>
-              <Box>
-                <Text size="xs" c="dimmed" fw={500}>Cédula de Identidad</Text>
-                <Text fw={600} size="md" c="var(--anican-azul-oscuro)">
-                  {selectedRepresentante.cedula}
-                </Text>
-              </Box>
-            </Group>
-
-            <Group gap="md" align="flex-start" wrap="nowrap">
-              <ThemeIcon variant="light" color="teal" size="lg" radius="md">
-                <IconPhone size={20} />
-              </ThemeIcon>
-              <Box>
-                <Text size="xs" c="dimmed" fw={500}>Teléfono Principal</Text>
-                <Text fw={600} size="md" c="var(--anican-azul-oscuro)">
-                  {selectedRepresentante.telefono_1 || '—'}
-                </Text>
-              </Box>
-            </Group>
-
-            {selectedRepresentante.telefono_2 && (
-              <Group gap="md" align="flex-start" wrap="nowrap">
-                <ThemeIcon variant="light" color="teal" size="lg" radius="md">
-                  <IconPhone size={20} />
-                </ThemeIcon>
-                <Box>
-                  <Text size="xs" c="dimmed" fw={500}>Teléfono Secundario</Text>
-                  <Text fw={600} size="md" c="var(--anican-azul-oscuro)">
-                    {selectedRepresentante.telefono_2}
-                  </Text>
-                </Box>
-              </Group>
-            )}
-
-            <Group gap="md" align="flex-start" wrap="nowrap">
-              <ThemeIcon variant="light" color="orange" size="lg" radius="md">
-                <IconMapPin size={20} />
-              </ThemeIcon>
-              <Box style={{ flex: 1 }}>
-                <Text size="xs" c="dimmed" fw={500}>Dirección de Residencia</Text>
-                <Text size="sm" c="var(--anican-azul-oscuro)" style={{ lineHeight: 1.4 }}>
-                  {selectedRepresentante.residencia || 'No registrada'}
-                </Text>
-              </Box>
-            </Group>
-          </Stack>
-        )}
-      </Modal>
+        representante={selectedRepInfo}
+      />
     </div>
   );
 };

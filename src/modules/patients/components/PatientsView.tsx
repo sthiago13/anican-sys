@@ -12,7 +12,14 @@ export function PatientsView() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
-  const { pacientes, representantes, loading, handleDeletePaciente } = usePatients();
+  
+  const {
+    pacientes,
+    representantes,
+    loading,
+    handleUpdateStatus,
+    handleUpdatePaciente,
+  } = usePatients();
 
   const filterOptions = [
     { value: "Todos", label: "Todos" },
@@ -21,11 +28,7 @@ export function PatientsView() {
     { value: "Fallecido", label: "Fallecido" },
   ];
 
-  const handleEditPaciente = () => {
-    navigate("/registro");
-  };
-
-  if (loading) {
+  if (loading && pacientes.length === 0) {
     return (
       <Center style={{ height: "70vh" }}>
         <Stack align="center" gap="md">
@@ -85,10 +88,11 @@ export function PatientsView() {
           representantes={representantes}
           searchQuery={searchQuery}
           filterStatus={filterStatus}
-          onEditPaciente={handleEditPaciente}
-          onDeletePaciente={handleDeletePaciente}
+          onUpdateStatus={handleUpdateStatus}
+          onUpdatePaciente={handleUpdatePaciente}
         />
       </Card>
     </Stack>
   );
 }
+
