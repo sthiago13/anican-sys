@@ -31,7 +31,6 @@ import { FilterDropdown } from "./components/UI/FilterDropdown";
 import { Button } from "./components/UI/Button";
 import { Login } from "./components/Feature/Login";
 import { supabase } from "./config/supabase";
-import { supabase } from './config/supabase';
 
 const theme = createTheme({
   primaryColor: "orange",
