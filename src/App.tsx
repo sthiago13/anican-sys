@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MantineProvider,
   createTheme,
@@ -11,6 +11,8 @@ import {
   Card,
   Divider,
   Table,
+  Center,
+  Loader,
 } from "@mantine/core";
 import {
   IconUsers,
@@ -18,6 +20,7 @@ import {
   IconActivity,
   IconCash,
 } from "@tabler/icons-react";
+import { supabase } from "./config/supabase";
 import { Sidebar } from "./components/Feature/Sidebar";
 import {
   PacienteTable,
@@ -41,133 +44,130 @@ const theme = createTheme({
   },
 });
 
-// =============================================
-// Datos mock alineados a Supabase
-// =============================================
-
-const INITIAL_REPRESENTANTES: Representante[] = [
-  {
-    id: "rep-1",
-    cedula: "V-15234567",
-    nombres: "María del Carmen García",
-    telefono_1: "+58 412-1234567",
-    telefono_2: "+58 241-8901234",
-    residencia: "Av. Bolívar Norte, Valencia, Carabobo",
-  },
-  {
-    id: "rep-2",
-    cedula: "V-18765432",
-    nombres: "José Luis Rodríguez",
-    telefono_1: "+58 414-7654321",
-    residencia: "Urb. El Trigal, Valencia, Carabobo",
-  },
-  {
-    id: "rep-3",
-    cedula: "V-20123456",
-    nombres: "Ana Beatriz Mendoza",
-    telefono_1: "+58 424-5551234",
-    residencia: "Sector La Isabelica, Valencia",
-  },
-  {
-    id: "rep-4",
-    cedula: "V-16789012",
-    nombres: "Carlos Eduardo Pérez",
-    telefono_1: "+58 416-3334567",
-    telefono_2: "+58 241-6667890",
-    residencia: "Municipio San Diego, Carabobo",
-  },
-  {
-    id: "rep-5",
-    cedula: "V-22345678",
-    nombres: "Luisa Fernanda Torres",
-    telefono_1: "+58 412-9998877",
-    residencia: "Naguanagua, Carabobo",
-  },
-];
-
-const INITIAL_PACIENTES: Paciente[] = [
-  {
-    id: "pac-1",
-    id_representante: "rep-1",
-    nombres: "Sebastián Alejandro",
-    apellidos: "García Martínez",
-    fecha_nacimiento: "2019-03-15",
-    diagnostico: "Leucemia Linfoblástica Aguda",
-    sexo: "Masculino",
-    estado: "Activo",
-    representante_nombre: "María del Carmen García",
-  },
-  {
-    id: "pac-2",
-    id_representante: "rep-2",
-    nombres: "Valentina",
-    apellidos: "Rodríguez Silva",
-    fecha_nacimiento: "2020-07-22",
-    diagnostico: "Neuroblastoma",
-    sexo: "Femenino",
-    estado: "Activo",
-    representante_nombre: "José Luis Rodríguez",
-  },
-  {
-    id: "pac-3",
-    id_representante: "rep-3",
-    nombres: "Daniel Enrique",
-    apellidos: "Mendoza López",
-    fecha_nacimiento: "2017-11-08",
-    diagnostico: "Linfoma de Hodgkin",
-    sexo: "Masculino",
-    estado: "Inactivo",
-    representante_nombre: "Ana Beatriz Mendoza",
-  },
-  {
-    id: "pac-4",
-    id_representante: "rep-4",
-    nombres: "Camila Sofía",
-    apellidos: "Pérez Herrera",
-    fecha_nacimiento: "2021-01-30",
-    diagnostico: "Tumor de Wilms",
-    sexo: "Femenino",
-    estado: "Activo",
-    representante_nombre: "Carlos Eduardo Pérez",
-  },
-  {
-    id: "pac-5",
-    id_representante: "rep-5",
-    nombres: "Mateo Andrés",
-    apellidos: "Torres Ramírez",
-    fecha_nacimiento: "2018-05-12",
-    diagnostico: "Osteosarcoma",
-    sexo: "Masculino",
-    estado: "Activo",
-    representante_nombre: "Luisa Fernanda Torres",
-  },
-];
+interface DbPaciente {
+  id: string;
+  id_representante: string | null;
+  nombres: string;
+  apellidos: string;
+  fecha_nacimiento: string;
+  diagnostico: string | null;
+  sexo: string | null;
+  estado: Paciente["estado"];
+  created_at?: string;
+  representantes: { nombres: string } | { nombres: string }[] | null;
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeView, setActiveView] = useState("dashboard");
-  const [pacientes, setPacientes] = useState<Paciente[]>(INITIAL_PACIENTES);
-  const [representantes, setRepresentantes] = useState<Representante[]>(
-    INITIAL_REPRESENTANTES,
-  );
+  const [pacientes, setPacientes] = useState<Paciente[]>([]);
+  const [representantes, setRepresentantes] = useState<Representante[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
+  const [loading, setLoading] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const { data: pacData, error: pacError } = await supabase.from(
+        "pacientes",
+      ).select(`
+          id,
+          id_representante,
+          nombres,
+          apellidos,
+          fecha_nacimiento,
+          diagnostico,
+          sexo,
+          estado,
+          created_at,
+          representantes (
+            nombres
+          )
+        `);
+
+      if (pacError) throw pacError;
+
+      const { data: repData, error: repError } = await supabase
+        .from("representantes")
+        .select("*");
+
+      if (repError) throw repError;
+
+      const mappedPacientes: Paciente[] = (
+        (pacData as unknown as DbPaciente[]) || []
+      ).map((pac) => {
+        const rep = Array.isArray(pac.representantes)
+          ? pac.representantes[0]
+          : pac.representantes;
+
+        return {
+          id: pac.id,
+          id_representante: pac.id_representante || undefined,
+          nombres: pac.nombres,
+          apellidos: pac.apellidos,
+          fecha_nacimiento: pac.fecha_nacimiento,
+          diagnostico: pac.diagnostico || undefined,
+          sexo: pac.sexo || undefined,
+          estado: pac.estado,
+          created_at: pac.created_at,
+          representante_nombre: rep ? rep.nombres : "—",
+        };
+      });
+
+      setPacientes(mappedPacientes);
+      setRepresentantes(repData || []);
+      console.log(repData);
+    } catch (err: unknown) {
+      console.error("Error al cargar datos desde Supabase:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const timer = setTimeout(() => {
+        void fetchData();
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
 
   // Handle new registration from Stepper
   const handleRegistrationComplete = (
     newRep: Representante,
     newPac: Paciente,
   ) => {
-    setRepresentantes([newRep, ...representantes]);
-    setPacientes([newPac, ...pacientes]);
+    setRepresentantes((prev) => [newRep, ...prev]);
+    setPacientes((prev) => [newPac, ...prev]);
     setActiveView("pacientes");
   };
 
-  const handleDeletePaciente = (id: string) => {
+  const handleDeletePaciente = async (id: string) => {
     if (
       confirm("¿Estás seguro de que deseas eliminar este paciente del sistema?")
     ) {
-      setPacientes(pacientes.filter((p) => p.id !== id));
+      try {
+        setLoading(true);
+        const { error: deleteError } = await supabase
+          .from("pacientes")
+          .delete()
+          .eq("id", id);
+
+        if (deleteError) throw deleteError;
+
+        setPacientes((prev) => prev.filter((p) => p.id !== id));
+      } catch (err: unknown) {
+        console.error("Error al eliminar paciente:", err);
+        alert(
+          err instanceof Error
+            ? `Error al eliminar: ${err.message}`
+            : "No se pudo eliminar el paciente.",
+        );
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -214,274 +214,292 @@ function App() {
         <Box
           style={{ flexGrow: 1, padding: 32, maxWidth: "calc(100% - 260px)" }}
         >
-          {/* =============================================
+          {loading ? (
+            <Center style={{ height: "70vh" }}>
+              <Stack align="center" gap="md">
+                <Loader color="orange" size="xl" type="bars" />
+                <Text size="sm" c="dimmed">
+                  Cargando información...
+                </Text>
+              </Stack>
+            </Center>
+          ) : (
+            <>
+              {/* =============================================
               DASHBOARD
               ============================================= */}
-          {activeView === "dashboard" && (
-            <Stack gap="xl" className="anican-fade-in">
-              <div>
-                <Title
-                  order={1}
-                  style={{
-                    letterSpacing: -1,
-                    color: "var(--anican-azul-oscuro)",
-                  }}
-                >
-                  Panel de Control
-                </Title>
-                <Text c="dimmed">Resumen general de la Fundación Anican</Text>
-              </div>
-
-              {/* KPIs Grid */}
-              <Grid>
-                <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
-                  <StatCard
-                    title="Pacientes Registrados"
-                    value={totalPacientes}
-                    icon={<IconUsers size={24} />}
-                    trend={{ value: 12, type: "up" }}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
-                  <StatCard
-                    title="Pacientes Activos"
-                    value={enTratamiento}
-                    icon={<IconActivity size={24} />}
-                    color="teal"
-                    trend={{ value: 8, type: "up", label: "este mes" }}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
-                  <StatCard
-                    title="Representantes"
-                    value={totalRepresentantes}
-                    icon={<IconHeartHandshake size={24} />}
-                    color="blue"
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
-                  <StatCard
-                    title="Pacientes Inactivos"
-                    value={inactivos}
-                    icon={<IconCash size={24} />}
-                    color="orange"
-                    trend={{
-                      value: 2,
-                      type: "down",
-                      label: "desde la semana pasada",
-                    }}
-                  />
-                </Grid.Col>
-              </Grid>
-
-              <Divider />
-
-              {/* Quick Table Preview */}
-              <Card withBorder radius="md" p="lg" shadow="xs">
-                <Group justify="space-between" mb="md">
+              {activeView === "dashboard" && (
+                <Stack gap="xl" className="anican-fade-in">
                   <div>
-                    <Title order={3} c="var(--anican-azul-oscuro)">
-                      Pacientes Recientes
+                    <Title
+                      order={1}
+                      style={{
+                        letterSpacing: -1,
+                        color: "var(--anican-azul-oscuro)",
+                      }}
+                    >
+                      Panel de Control
                     </Title>
-                    <Text size="sm" c="dimmed">
-                      Últimos pacientes registrados en el sistema
+                    <Text c="dimmed">
+                      Resumen general de la Fundación Anican
                     </Text>
                   </div>
-                  <Button onClick={() => setActiveView("pacientes")}>
-                    Ver Todos los Pacientes
-                  </Button>
-                </Group>
-                <PacienteTable
-                  pacientes={pacientes.slice(0, 3)}
-                  searchQuery=""
-                  filterStatus="Todos"
-                  onEditPaciente={handleEditPaciente}
-                  onDeletePaciente={handleDeletePaciente}
-                />
-              </Card>
-            </Stack>
-          )}
 
-          {/* =============================================
+                  {/* KPIs Grid */}
+                  <Grid>
+                    <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                      <StatCard
+                        title="Pacientes Registrados"
+                        value={totalPacientes}
+                        icon={<IconUsers size={24} />}
+                        trend={{ value: 12, type: "up" }}
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                      <StatCard
+                        title="Pacientes Activos"
+                        value={enTratamiento}
+                        icon={<IconActivity size={24} />}
+                        color="teal"
+                        trend={{ value: 8, type: "up", label: "este mes" }}
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                      <StatCard
+                        title="Representantes"
+                        value={totalRepresentantes}
+                        icon={<IconHeartHandshake size={24} />}
+                        color="blue"
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, sm: 6, lg: 3 }}>
+                      <StatCard
+                        title="Pacientes Inactivos"
+                        value={inactivos}
+                        icon={<IconCash size={24} />}
+                        color="orange"
+                        trend={{
+                          value: 2,
+                          type: "down",
+                          label: "desde la semana pasada",
+                        }}
+                      />
+                    </Grid.Col>
+                  </Grid>
+
+                  <Divider />
+
+                  {/* Quick Table Preview */}
+                  <Card withBorder radius="md" p="lg" shadow="xs">
+                    <Group justify="space-between" mb="md">
+                      <div>
+                        <Title order={3} c="var(--anican-azul-oscuro)">
+                          Pacientes Recientes
+                        </Title>
+                        <Text size="sm" c="dimmed">
+                          Últimos pacientes registrados en el sistema
+                        </Text>
+                      </div>
+                      <Button onClick={() => setActiveView("pacientes")}>
+                        Ver Todos los Pacientes
+                      </Button>
+                    </Group>
+                    <PacienteTable
+                      pacientes={pacientes.slice(0, 3)}
+                      representantes={representantes}
+                      searchQuery=""
+                      filterStatus="Todos"
+                      onEditPaciente={handleEditPaciente}
+                      onDeletePaciente={handleDeletePaciente}
+                    />
+                  </Card>
+                </Stack>
+              )}
+
+              {/* =============================================
               PACIENTES
               ============================================= */}
-          {activeView === "pacientes" && (
-            <Stack gap="xl" className="anican-fade-in">
-              <Group justify="space-between" align="center">
-                <div>
-                  <Title
-                    order={1}
-                    style={{
-                      letterSpacing: -1,
-                      color: "var(--anican-azul-oscuro)",
-                    }}
-                  >
-                    Gestión de Pacientes
-                  </Title>
-                  <Text c="dimmed">
-                    Consulta y administra los pacientes registrados en la
-                    fundación
-                  </Text>
-                </div>
-                <Button
-                  leftSection={<IconUsers size={16} />}
-                  onClick={() => setActiveView("registro")}
-                >
-                  Nuevo Registro
-                </Button>
-              </Group>
-
-              <Card withBorder radius="md" p="lg" shadow="xs">
-                <Group justify="space-between" mb="lg">
-                  <Group style={{ flexGrow: 1, maxWidth: 400 }}>
-                    <SearchInput
-                      placeholder="Buscar por nombre, diagnóstico..."
-                      onSearchChange={setSearchQuery}
-                      style={{ width: "100%" }}
-                    />
-                  </Group>
-                  <FilterDropdown
-                    label="Estado"
-                    options={filterOptions}
-                    selectedValue={filterStatus}
-                    onSelect={setFilterStatus}
-                  />
-                </Group>
-
-                <PacienteTable
-                  pacientes={pacientes}
-                  searchQuery={searchQuery}
-                  filterStatus={filterStatus}
-                  onEditPaciente={handleEditPaciente}
-                  onDeletePaciente={handleDeletePaciente}
-                />
-              </Card>
-            </Stack>
-          )}
-
-          {/* =============================================
-              REGISTRO (STEPPER)
-              ============================================= */}
-          {activeView === "registro" && (
-            <RegistrationStepper
-              onRegistrationComplete={handleRegistrationComplete}
-            />
-          )}
-
-          {/* =============================================
-              DONACIONES
-              ============================================= */}
-          {activeView === "donaciones" && (
-            <Stack gap="xl" className="anican-fade-in">
-              <div>
-                <Title
-                  order={1}
-                  style={{
-                    letterSpacing: -1,
-                    color: "var(--anican-azul-oscuro)",
-                  }}
-                >
-                  Registro de Donaciones
-                </Title>
-                <Text c="dimmed">
-                  Visualiza los aportes recibidos y entregados por la Fundación
-                  Anican
-                </Text>
-              </div>
-
-              <Grid>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <StatCard
-                    title="Donaciones Entregadas"
-                    value="—"
-                    icon={<IconCash size={24} />}
-                    color="green"
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <StatCard
-                    title="Donaciones Recibidas"
-                    value="—"
-                    icon={<IconHeartHandshake size={24} />}
-                    color="blue"
-                  />
-                </Grid.Col>
-              </Grid>
-
-              <Card withBorder radius="md" p="lg" shadow="xs">
-                <Title order={3} mb="md" c="var(--anican-azul-oscuro)">
-                  Historial de Donaciones
-                </Title>
-                <Table striped highlightOnHover verticalSpacing="sm">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Entidad / Paciente</Table.Th>
-                      <Table.Th>Tipo</Table.Th>
-                      <Table.Th>Fecha</Table.Th>
-                      <Table.Th>Observaciones</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    <Table.Tr>
-                      <Table.Td colSpan={4}>
-                        <Text ta="center" py="xl" c="dimmed">
-                          Las donaciones se conectarán con las tablas de
-                          Supabase próximamente.
-                        </Text>
-                      </Table.Td>
-                    </Table.Tr>
-                  </Table.Tbody>
-                </Table>
-              </Card>
-            </Stack>
-          )}
-
-          {/* =============================================
-              CONFIGURACIÓN
-              ============================================= */}
-          {activeView === "configuracion" && (
-            <Stack gap="xl" className="anican-fade-in">
-              <div>
-                <Title
-                  order={1}
-                  style={{
-                    letterSpacing: -1,
-                    color: "var(--anican-azul-oscuro)",
-                  }}
-                >
-                  Configuración del Sistema
-                </Title>
-                <Text c="dimmed">
-                  Ajustes generales del panel administrativo de Anican
-                </Text>
-              </div>
-
-              <Card withBorder radius="md" p="lg" shadow="xs">
-                <Stack gap="md">
-                  <Title order={4} c="var(--anican-azul-oscuro)">
-                    Preferencias Generales
-                  </Title>
-                  <Text size="sm" c="dimmed">
-                    El sistema está configurado en español. Gestión de pacientes
-                    pediátricos oncológicos y sus representantes legales.
-                  </Text>
-                  <Divider />
-                  <Group justify="space-between">
+              {activeView === "pacientes" && (
+                <Stack gap="xl" className="anican-fade-in">
+                  <Group justify="space-between" align="center">
                     <div>
-                      <Text fw={600} c="var(--anican-azul-oscuro)">
-                        Tema del Sistema
-                      </Text>
-                      <Text size="xs" c="dimmed">
-                        Cambiar la apariencia de la interfaz
+                      <Title
+                        order={1}
+                        style={{
+                          letterSpacing: -1,
+                          color: "var(--anican-azul-oscuro)",
+                        }}
+                      >
+                        Gestión de Pacientes
+                      </Title>
+                      <Text c="dimmed">
+                        Consulta y administra los pacientes registrados en la
+                        fundación
                       </Text>
                     </div>
-                    <Button variant="outline" color="gray" disabled>
-                      Tema Claro (Predeterminado)
+                    <Button
+                      leftSection={<IconUsers size={16} />}
+                      onClick={() => setActiveView("registro")}
+                    >
+                      Nuevo Registro
                     </Button>
                   </Group>
+
+                  <Card withBorder radius="md" p="lg" shadow="xs">
+                    <Group justify="space-between" mb="lg">
+                      <Group style={{ flexGrow: 1, maxWidth: 400 }}>
+                        <SearchInput
+                          placeholder="Buscar por nombre, diagnóstico..."
+                          onSearchChange={setSearchQuery}
+                          style={{ width: "100%" }}
+                        />
+                      </Group>
+                      <FilterDropdown
+                        label="Estado"
+                        options={filterOptions}
+                        selectedValue={filterStatus}
+                        onSelect={setFilterStatus}
+                      />
+                    </Group>
+
+                    <PacienteTable
+                      pacientes={pacientes}
+                      representantes={representantes}
+                      searchQuery={searchQuery}
+                      filterStatus={filterStatus}
+                      onEditPaciente={handleEditPaciente}
+                      onDeletePaciente={handleDeletePaciente}
+                    />
+                  </Card>
                 </Stack>
-              </Card>
-            </Stack>
+              )}
+
+              {/* =============================================
+              REGISTRO (STEPPER)
+              ============================================= */}
+              {activeView === "registro" && (
+                <RegistrationStepper
+                  onRegistrationComplete={handleRegistrationComplete}
+                />
+              )}
+
+              {/* =============================================
+              DONACIONES
+              ============================================= */}
+              {activeView === "donaciones" && (
+                <Stack gap="xl" className="anican-fade-in">
+                  <div>
+                    <Title
+                      order={1}
+                      style={{
+                        letterSpacing: -1,
+                        color: "var(--anican-azul-oscuro)",
+                      }}
+                    >
+                      Registro de Donaciones
+                    </Title>
+                    <Text c="dimmed">
+                      Visualiza los aportes recibidos y entregados por la
+                      Fundación Anican
+                    </Text>
+                  </div>
+
+                  <Grid>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <StatCard
+                        title="Donaciones Entregadas"
+                        value="—"
+                        icon={<IconCash size={24} />}
+                        color="green"
+                      />
+                    </Grid.Col>
+                    <Grid.Col span={{ base: 12, md: 6 }}>
+                      <StatCard
+                        title="Donaciones Recibidas"
+                        value="—"
+                        icon={<IconHeartHandshake size={24} />}
+                        color="blue"
+                      />
+                    </Grid.Col>
+                  </Grid>
+
+                  <Card withBorder radius="md" p="lg" shadow="xs">
+                    <Title order={3} mb="md" c="var(--anican-azul-oscuro)">
+                      Historial de Donaciones
+                    </Title>
+                    <Table striped highlightOnHover verticalSpacing="sm">
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Entidad / Paciente</Table.Th>
+                          <Table.Th>Tipo</Table.Th>
+                          <Table.Th>Fecha</Table.Th>
+                          <Table.Th>Observaciones</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        <Table.Tr>
+                          <Table.Td colSpan={4}>
+                            <Text ta="center" py="xl" c="dimmed">
+                              Las donaciones se conectarán con las tablas de
+                              Supabase próximamente.
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      </Table.Tbody>
+                    </Table>
+                  </Card>
+                </Stack>
+              )}
+
+              {/* =============================================
+              CONFIGURACIÓN
+              ============================================= */}
+              {activeView === "configuracion" && (
+                <Stack gap="xl" className="anican-fade-in">
+                  <div>
+                    <Title
+                      order={1}
+                      style={{
+                        letterSpacing: -1,
+                        color: "var(--anican-azul-oscuro)",
+                      }}
+                    >
+                      Configuración del Sistema
+                    </Title>
+                    <Text c="dimmed">
+                      Ajustes generales del panel administrativo de Anican
+                    </Text>
+                  </div>
+
+                  <Card withBorder radius="md" p="lg" shadow="xs">
+                    <Stack gap="md">
+                      <Title order={4} c="var(--anican-azul-oscuro)">
+                        Preferencias Generales
+                      </Title>
+                      <Text size="sm" c="dimmed">
+                        El sistema está configurado en español. Gestión de
+                        pacientes pediátricos oncológicos y sus representantes
+                        legales.
+                      </Text>
+                      <Divider />
+                      <Group justify="space-between">
+                        <div>
+                          <Text fw={600} c="var(--anican-azul-oscuro)">
+                            Tema del Sistema
+                          </Text>
+                          <Text size="xs" c="dimmed">
+                            Cambiar la apariencia de la interfaz
+                          </Text>
+                        </div>
+                        <Button variant="outline" color="gray" disabled>
+                          Tema Claro (Predeterminado)
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Card>
+                </Stack>
+              )}
+            </>
           )}
         </Box>
       </Box>
