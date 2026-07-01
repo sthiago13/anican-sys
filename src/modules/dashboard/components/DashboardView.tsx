@@ -8,16 +8,12 @@ import { usePatients } from "../../patients/hooks/usePatients";
 
 export function DashboardView() {
   const navigate = useNavigate();
-  const { pacientes, representantes, loading, handleDeletePaciente } = usePatients();
+  const { pacientes, representantes, loading, handleUpdateStatus, handleUpdatePaciente } = usePatients();
 
   const totalPacientes = pacientes.length;
   const enTratamiento = pacientes.filter((p) => p.estado === "Activo").length;
   const inactivos = pacientes.filter((p) => p.estado === "Inactivo").length;
   const totalRepresentantes = representantes.length;
-
-  const handleEditPaciente = () => {
-    navigate("/registro");
-  };
 
   if (loading) {
     return (
@@ -109,8 +105,8 @@ export function DashboardView() {
           representantes={representantes}
           searchQuery=""
           filterStatus="Todos"
-          onEditPaciente={handleEditPaciente}
-          onDeletePaciente={handleDeletePaciente}
+          onUpdateStatus={handleUpdateStatus}
+          onUpdatePaciente={handleUpdatePaciente}
         />
       </Card>
     </Stack>
