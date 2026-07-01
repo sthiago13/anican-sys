@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Stepper,
   TextInput,
@@ -13,8 +13,8 @@ import {
   Box,
   Divider,
   Grid,
-} from '@mantine/core';
-import { DateInput } from '@mantine/dates';
+} from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import {
   IconUser,
   IconStethoscope,
@@ -24,53 +24,63 @@ import {
   IconPhone,
   IconHome,
   IconCalendar,
-} from '@tabler/icons-react';
-import { Button } from '../UI/Button';
-import type { Representante, Paciente } from './PatientTable';
+} from "@tabler/icons-react";
+import { Button } from "../UI/Button";
+import type { Representante, Paciente } from "./PatientTable";
 
-import '@mantine/dates/styles.css';
+import "@mantine/dates/styles.css";
 
 export interface RegistrationStepperProps {
-  onRegistrationComplete: (representante: Omit<Representante, 'id' | 'created_at'>, paciente: Omit<Paciente, 'id' | 'id_representante' | 'created_at'>) => void;
+  onRegistrationComplete: (
+    representante: Omit<Representante, "id" | "created_at">,
+    paciente: Omit<Paciente, "id" | "id_representante" | "created_at">,
+  ) => Promise<boolean>;
+  onSuccessRedirect?: () => void;
 }
 
 export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
   onRegistrationComplete,
+  onSuccessRedirect,
 }) => {
   const [active, setActive] = useState(0);
   const [success, setSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Paso 1: Representante (alineado a tabla `representantes`)
-  const [cedula, setCedula] = useState('');
-  const [repNombres, setRepNombres] = useState('');
-  const [telefono1, setTelefono1] = useState('');
-  const [telefono2, setTelefono2] = useState('');
-  const [residencia, setResidencia] = useState('');
+  const [cedula, setCedula] = useState("");
+  const [repNombres, setRepNombres] = useState("");
+  const [telefono1, setTelefono1] = useState("");
+  const [telefono2, setTelefono2] = useState("");
+  const [residencia, setResidencia] = useState("");
 
   // Paso 2: Paciente (alineado a tabla `pacientes`)
-  const [pacNombres, setPacNombres] = useState('');
-  const [pacApellidos, setPacApellidos] = useState('');
+  const [pacNombres, setPacNombres] = useState("");
+  const [pacApellidos, setPacApellidos] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState<Date | null>(null);
-  const [diagnostico, setDiagnostico] = useState('');
+  const [diagnostico, setDiagnostico] = useState("");
   const [sexo, setSexo] = useState<string | null>(null);
-  const [estado, setEstado] = useState<string | null>('Activo');
+  const [estado, setEstado] = useState<string | null>("Activo");
 
   // Validation
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!cedula.trim()) newErrors.cedula = 'La cédula es obligatoria';
-    if (!repNombres.trim()) newErrors.repNombres = 'El nombre es obligatorio';
+    if (!cedula.trim()) newErrors.cedula = "La cédula es obligatoria";
+    if (!repNombres.trim()) newErrors.repNombres = "El nombre es obligatorio";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateStep2 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!pacNombres.trim()) newErrors.pacNombres = 'Los nombres son obligatorios';
-    if (!pacApellidos.trim()) newErrors.pacApellidos = 'Los apellidos son obligatorios';
-    if (!fechaNacimiento) newErrors.fechaNacimiento = 'La fecha de nacimiento es obligatoria';
+    if (!pacNombres.trim())
+      newErrors.pacNombres = "Los nombres son obligatorios";
+    if (!pacApellidos.trim())
+      newErrors.pacApellidos = "Los apellidos son obligatorios";
+    if (!fechaNacimiento)
+      newErrors.fechaNacimiento = "La fecha de nacimiento es obligatoria";
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -90,8 +100,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
     setErrors({});
   };
 
-  const handleSubmit = () => {
-    const representanteData: Omit<Representante, 'id' | 'created_at'> = {
+  const handleSubmit = async () => {
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    const representanteData: Omit<Representante, "id" | "created_at"> = {
       cedula: cedula.trim(),
       nombres: repNombres.trim(),
       telefono_1: telefono1.trim() || undefined,
@@ -99,34 +112,56 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
       residencia: residencia.trim() || undefined,
     };
 
-    const pacienteData: Omit<Paciente, 'id' | 'id_representante' | 'created_at'> = {
+    const pacienteData: Omit<
+      Paciente,
+      "id" | "id_representante" | "created_at"
+    > = {
       nombres: pacNombres.trim(),
       apellidos: pacApellidos.trim(),
-      fecha_nacimiento: fechaNacimiento ? fechaNacimiento.toISOString().split('T')[0] : '',
+      fecha_nacimiento: fechaNacimiento
+        ? fechaNacimiento.toISOString().split("T")[0]
+        : "",
       diagnostico: diagnostico.trim() || undefined,
       sexo: sexo || undefined,
-      estado: (estado as Paciente['estado']) || 'Activo',
+      estado: (estado as Paciente["estado"]) || "Activo",
     };
 
-    onRegistrationComplete(representanteData, pacienteData);
-    setSuccess(true);
-
-    // Reset form after delay
-    setTimeout(() => {
-      setActive(0);
-      setSuccess(false);
-      setCedula('');
-      setRepNombres('');
-      setTelefono1('');
-      setTelefono2('');
-      setResidencia('');
-      setPacNombres('');
-      setPacApellidos('');
-      setFechaNacimiento(null);
-      setDiagnostico('');
-      setSexo(null);
-      setEstado('Activo');
-    }, 3000);
+    try {
+      const isSuccess = await onRegistrationComplete(
+        representanteData,
+        pacienteData,
+      );
+      if (isSuccess) {
+        setSuccess(true);
+        setTimeout(() => {
+          setActive(0);
+          setSuccess(false);
+          setCedula("");
+          setRepNombres("");
+          setTelefono1("");
+          setTelefono2("");
+          setResidencia("");
+          setPacNombres("");
+          setPacApellidos("");
+          setFechaNacimiento(null);
+          setDiagnostico("");
+          setSexo(null);
+          setEstado("Activo");
+          if (onSuccessRedirect) {
+            onSuccessRedirect();
+          }
+        }, 3000);
+      } else {
+        setSubmitError(
+          "Ocurrió un error al persistir la información. Verifica la conexión con Supabase.",
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      setSubmitError("Ocurrió un error inesperado al procesar el registro.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (success) {
@@ -136,7 +171,7 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
         radius="md"
         p="xl"
         shadow="sm"
-        style={{ maxWidth: 600, margin: '0 auto' }}
+        style={{ maxWidth: 600, margin: "0 auto" }}
         className="anican-fade-in"
       >
         <Stack align="center" gap="md" py="xl">
@@ -144,11 +179,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             style={{
               width: 64,
               height: 64,
-              borderRadius: '50%',
-              background: 'linear-gradient(135deg, #38a169, #48bb78)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #38a169, #48bb78)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <IconCheck size={32} color="#fff" stroke={2.5} />
@@ -157,7 +192,8 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             ¡Registro Exitoso!
           </Title>
           <Text c="dimmed" ta="center">
-            El representante y el paciente han sido registrados correctamente en el sistema.
+            El representante y el paciente han sido registrados correctamente en
+            el sistema.
           </Text>
         </Stack>
       </Card>
@@ -167,7 +203,10 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
   return (
     <Stack gap="xl" className="anican-fade-in">
       <div>
-        <Title order={1} style={{ letterSpacing: -1, color: 'var(--anican-azul-oscuro)' }}>
+        <Title
+          order={1}
+          style={{ letterSpacing: -1, color: "var(--anican-azul-oscuro)" }}
+        >
           Nuevo Registro
         </Title>
         <Text c="dimmed">
@@ -200,8 +239,8 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                 variant="light"
                 title="Datos del Representante"
               >
-                Ingresa los datos del padre, madre o tutor legal del paciente. Estos datos son
-                requeridos para el registro.
+                Ingresa los datos del padre, madre o tutor legal del paciente.
+                Estos datos son requeridos para el registro.
               </Alert>
 
               <Grid>
@@ -215,7 +254,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     onChange={(e) => setCedula(e.target.value)}
                     error={errors.cedula}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -230,7 +273,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     onChange={(e) => setRepNombres(e.target.value)}
                     error={errors.repNombres}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -243,7 +290,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     value={telefono1}
                     onChange={(e) => setTelefono1(e.target.value)}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -256,7 +307,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     value={telefono2}
                     onChange={(e) => setTelefono2(e.target.value)}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -270,7 +325,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     onChange={(e) => setResidencia(e.target.value)}
                     minRows={2}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -294,8 +353,8 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                 variant="light"
                 title="Datos del Paciente"
               >
-                Ingresa los datos del niño o niña. Este paciente se vinculará automáticamente al
-                representante registrado en el paso anterior.
+                Ingresa los datos del niño o niña. Este paciente se vinculará
+                automáticamente al representante registrado en el paso anterior.
               </Alert>
 
               <Grid>
@@ -308,7 +367,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     onChange={(e) => setPacNombres(e.target.value)}
                     error={errors.pacNombres}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -322,7 +385,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     onChange={(e) => setPacApellidos(e.target.value)}
                     error={errors.pacApellidos}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -341,7 +408,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     maxDate={new Date()}
                     error={errors.fechaNacimiento}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -353,7 +424,11 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     value={diagnostico}
                     onChange={(e) => setDiagnostico(e.target.value)}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -363,13 +438,17 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     label="Sexo"
                     placeholder="Seleccionar"
                     data={[
-                      { value: 'Masculino', label: 'Masculino' },
-                      { value: 'Femenino', label: 'Femenino' },
+                      { value: "Masculino", label: "Masculino" },
+                      { value: "Femenino", label: "Femenino" },
                     ]}
                     value={sexo}
                     onChange={(value) => setSexo(value)}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -379,14 +458,18 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     label="Estado"
                     placeholder="Seleccionar"
                     data={[
-                      { value: 'Activo', label: 'Activo' },
-                      { value: 'Inactivo', label: 'Inactivo' },
-                      { value: 'Fallecido', label: 'Fallecido' },
+                      { value: "Activo", label: "Activo" },
+                      { value: "Inactivo", label: "Inactivo" },
+                      { value: "Fallecido", label: "Fallecido" },
                     ]}
                     value={estado}
                     onChange={(value) => setEstado(value)}
                     styles={{
-                      label: { fontWeight: 600, marginBottom: 4, color: 'var(--anican-azul-oscuro)' },
+                      label: {
+                        fontWeight: 600,
+                        marginBottom: 4,
+                        color: "var(--anican-azul-oscuro)",
+                      },
                       input: { borderRadius: 8 },
                     }}
                   />
@@ -406,8 +489,20 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                 variant="light"
                 title="Resumen del Registro"
               >
-                Verifica que los datos sean correctos antes de confirmar el registro.
+                Verifica que los datos sean correctos antes de confirmar el
+                registro.
               </Alert>
+
+              {submitError && (
+                <Alert
+                  icon={<IconAlertCircle size={16} />}
+                  color="red"
+                  variant="light"
+                  title="Error de Registro"
+                >
+                  {submitError}
+                </Alert>
+              )}
 
               <Grid>
                 <Grid.Col span={{ base: 12, md: 6 }}>
@@ -418,28 +513,63 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     <Divider mb="sm" />
                     <Stack gap={6}>
                       <Group gap="xs">
-                        <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 80 }}>Cédula:</Text>
+                        <Text
+                          size="sm"
+                          fw={600}
+                          c="dimmed"
+                          style={{ minWidth: 80 }}
+                        >
+                          Cédula:
+                        </Text>
                         <Text size="sm">{cedula}</Text>
                       </Group>
                       <Group gap="xs">
-                        <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 80 }}>Nombres:</Text>
+                        <Text
+                          size="sm"
+                          fw={600}
+                          c="dimmed"
+                          style={{ minWidth: 80 }}
+                        >
+                          Nombres:
+                        </Text>
                         <Text size="sm">{repNombres}</Text>
                       </Group>
                       {telefono1 && (
                         <Group gap="xs">
-                          <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 80 }}>Teléfono 1:</Text>
+                          <Text
+                            size="sm"
+                            fw={600}
+                            c="dimmed"
+                            style={{ minWidth: 80 }}
+                          >
+                            Teléfono 1:
+                          </Text>
                           <Text size="sm">{telefono1}</Text>
                         </Group>
                       )}
                       {telefono2 && (
                         <Group gap="xs">
-                          <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 80 }}>Teléfono 2:</Text>
+                          <Text
+                            size="sm"
+                            fw={600}
+                            c="dimmed"
+                            style={{ minWidth: 80 }}
+                          >
+                            Teléfono 2:
+                          </Text>
                           <Text size="sm">{telefono2}</Text>
                         </Group>
                       )}
                       {residencia && (
                         <Group gap="xs">
-                          <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 80 }}>Residencia:</Text>
+                          <Text
+                            size="sm"
+                            fw={600}
+                            c="dimmed"
+                            style={{ minWidth: 80 }}
+                          >
+                            Residencia:
+                          </Text>
                           <Text size="sm">{residencia}</Text>
                         </Group>
                       )}
@@ -455,26 +585,65 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     <Divider mb="sm" />
                     <Stack gap={6}>
                       <Group gap="xs">
-                        <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 100 }}>Nombres:</Text>
-                        <Text size="sm">{pacNombres} {pacApellidos}</Text>
+                        <Text
+                          size="sm"
+                          fw={600}
+                          c="dimmed"
+                          style={{ minWidth: 100 }}
+                        >
+                          Nombres:
+                        </Text>
+                        <Text size="sm">
+                          {pacNombres} {pacApellidos}
+                        </Text>
                       </Group>
                       <Group gap="xs">
-                        <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 100 }}>Fecha Nac.:</Text>
-                        <Text size="sm">{fechaNacimiento?.toLocaleDateString('es-VE') || '—'}</Text>
+                        <Text
+                          size="sm"
+                          fw={600}
+                          c="dimmed"
+                          style={{ minWidth: 100 }}
+                        >
+                          Fecha Nac.:
+                        </Text>
+                        <Text size="sm">
+                          {fechaNacimiento?.toLocaleDateString("es-VE") || "—"}
+                        </Text>
                       </Group>
                       {diagnostico && (
                         <Group gap="xs">
-                          <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 100 }}>Diagnóstico:</Text>
+                          <Text
+                            size="sm"
+                            fw={600}
+                            c="dimmed"
+                            style={{ minWidth: 100 }}
+                          >
+                            Diagnóstico:
+                          </Text>
                           <Text size="sm">{diagnostico}</Text>
                         </Group>
                       )}
                       <Group gap="xs">
-                        <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 100 }}>Sexo:</Text>
-                        <Text size="sm">{sexo || '—'}</Text>
+                        <Text
+                          size="sm"
+                          fw={600}
+                          c="dimmed"
+                          style={{ minWidth: 100 }}
+                        >
+                          Sexo:
+                        </Text>
+                        <Text size="sm">{sexo || "—"}</Text>
                       </Group>
                       <Group gap="xs">
-                        <Text size="sm" fw={600} c="dimmed" style={{ minWidth: 100 }}>Estado:</Text>
-                        <Text size="sm">{estado || 'Activo'}</Text>
+                        <Text
+                          size="sm"
+                          fw={600}
+                          c="dimmed"
+                          style={{ minWidth: 100 }}
+                        >
+                          Estado:
+                        </Text>
+                        <Text size="sm">{estado || "Activo"}</Text>
                       </Group>
                     </Stack>
                   </Card>
@@ -492,20 +661,19 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             variant="outline"
             color="gray"
             onClick={handleBack}
-            disabled={active === 0}
+            disabled={active === 0 || isSubmitting}
           >
             Anterior
           </Button>
 
           {active < 2 ? (
-            <Button onClick={handleNext}>
-              Siguiente
-            </Button>
+            <Button onClick={handleNext}>Siguiente</Button>
           ) : (
             <Button
               color="teal"
               leftSection={<IconCheck size={16} />}
               onClick={handleSubmit}
+              loading={isSubmitting}
             >
               Confirmar Registro
             </Button>
