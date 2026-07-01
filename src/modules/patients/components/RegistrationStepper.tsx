@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import React, { useState } from "react";
 import {
   Stepper,
   TextInput,
@@ -16,8 +15,6 @@ import {
   Grid,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
-} from "@mantine/core";
-import { DateInput } from "@mantine/dates";
 import {
   IconUser,
   IconStethoscope,
@@ -28,36 +25,29 @@ import {
   IconHome,
   IconCalendar,
 } from "@tabler/icons-react";
-import { Button } from "../UI/Button";
-import type { Representante, Paciente } from "./PatientTable";
-import { supabase } from "../../config/supabase";
+import { useNavigate } from "react-router-dom";
+import { Button } from "../../../components/UI/Button";
+import type { Representante } from "./PatientTable";
+import { supabase } from "../../../config/supabase";
 
 import "@mantine/dates/styles.css";
 
-export interface RegistrationStepperProps {
-  onRegistrationComplete: (
-    representante: Representante,
-    paciente: Paciente,
-  ) => void;
-}
-
-export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
-  onRegistrationComplete,
-  onSuccessRedirect,
-}) => {
+export const RegistrationStepper: React.FC = () => {
+  const navigate = useNavigate();
   const [active, setActive] = useState(0);
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Paso 1: Representante (alineado a tabla `representantes`)
+  // Paso 1: Representante
   const [cedula, setCedula] = useState("");
   const [repNombres, setRepNombres] = useState("");
   const [telefono1, setTelefono1] = useState("");
   const [telefono2, setTelefono2] = useState("");
   const [residencia, setResidencia] = useState("");
 
-  // Paso 2: Paciente (alineado a tabla `pacientes`)
+  // Paso 2: Paciente
   const [pacNombres, setPacNombres] = useState("");
   const [pacApellidos, setPacApellidos] = useState("");
   const [fechaNacimiento, setFechaNacimiento] = useState<Date | null>(null);
@@ -104,7 +94,7 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
   };
 
   const handleSubmit = async () => {
-    setError(null);
+    setSubmitError(null);
     setLoading(true);
 
     const representanteData = {
@@ -118,7 +108,6 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
     let insertedRep: Representante | null = null;
 
     try {
-      // Tarea 1: Insertar en representantes y capturar el id
       const { data: repData, error: repError } = await supabase
         .from("representantes")
         .insert([representanteData])
@@ -126,23 +115,16 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
         .single();
 
       if (repError) {
-        throw new Error(
-          `Error al registrar el representante: ${repError.message}`,
-        );
+        throw new Error(`Error al registrar el representante: ${repError.message}`);
       }
 
       if (!repData) {
-        throw new Error(
-          "No se recibió la confirmación del representante registrado.",
-        );
+        throw new Error("No se recibió la confirmación del representante registrado.");
       }
 
       insertedRep = repData as Representante;
 
-      // Tarea 2: Insertar en pacientes usando el id del representante
-      const fechaNacStr = fechaNacimiento
-        ? fechaNacimiento.toISOString().split("T")[0]
-        : "";
+      const fechaNacStr = fechaNacimiento ? fechaNacimiento.toISOString().split("T")[0] : "";
       const pacienteData = {
         nombres: pacNombres.trim(),
         apellidos: pacApellidos.trim(),
@@ -164,51 +146,21 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
       }
 
       if (!pacData) {
-        throw new Error(
-          "No se recibió la confirmación del paciente registrado.",
-        );
+        throw new Error("No se recibió la confirmación del paciente registrado.");
       }
       setSuccess(true);
 
-      const newPac: Paciente = {
-        ...pacData,
-        representante_nombre: insertedRep.nombres,
-      } as Paciente;
-
-      const finalRep = insertedRep;
-
-      // Limpiar estados y notificar éxito tras un delay de 2 segundos (2000ms)
       setTimeout(() => {
-        setActive(0);
-        setSuccess(false);
-        setCedula("");
-        setRepNombres("");
-        setTelefono1("");
-        setTelefono2("");
-        setResidencia("");
-        setPacNombres("");
-        setPacApellidos("");
-        setFechaNacimiento(null);
-        setDiagnostico("");
-        setSexo(null);
-        setEstado("Activo");
-
-        onRegistrationComplete(finalRep, newPac);
+        navigate("/pacientes");
       }, 2000);
     } catch (err: unknown) {
       console.error("Error en el proceso de registro:", err);
 
       if (insertedRep && insertedRep.id) {
         try {
-          await supabase
-            .from("representantes")
-            .delete()
-            .eq("id", insertedRep.id);
+          await supabase.from("representantes").delete().eq("id", insertedRep.id);
         } catch (cleanupErr) {
-          console.error(
-            "Error al limpiar el representante huérfano:",
-            cleanupErr,
-          );
+          console.error("Error al limpiar el representante huérfano:", cleanupErr);
         }
       }
 
@@ -216,7 +168,7 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
         err instanceof Error
           ? err.message
           : "Ocurrió un error inesperado al guardar los datos.";
-      setError(errorMessage);
+      setSubmitError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -250,8 +202,8 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             ¡Registro Exitoso!
           </Title>
           <Text c="dimmed" ta="center">
-            El representante y el paciente han sido registrados correctamente en
-            el sistema.
+            El representante y el paciente han sido registrados correctamente en el sistema.
+            Redirigiendo...
           </Text>
         </Stack>
       </Card>
@@ -295,9 +247,6 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             stepDescription: { fontSize: 12 },
           }}
         >
-          {/* =============================================
-              PASO 1: Datos del Representante
-              ============================================= */}
           <Stepper.Step
             label="Representante"
             description="Datos del tutor legal"
@@ -409,9 +358,6 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             </Stack>
           </Stepper.Step>
 
-          {/* =============================================
-              PASO 2: Datos del Paciente
-              ============================================= */}
           <Stepper.Step
             label="Paciente"
             description="Datos del niño(a)"
@@ -472,7 +418,6 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
                     required
                     leftSection={<IconCalendar size={16} stroke={1.5} />}
                     value={fechaNacimiento}
-                    //revisar
                     onChange={(date) => {
                       setFechaNacimiento(date ? new Date(date) : null);
                     }}
@@ -549,9 +494,6 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
             </Stack>
           </Stepper.Step>
 
-          {/* =============================================
-              PASO 3: Confirmación / Resumen
-              ============================================= */}
           <Stepper.Completed>
             <Stack gap="md" mt="xl">
               <Alert
@@ -726,7 +668,6 @@ export const RegistrationStepper: React.FC<RegistrationStepperProps> = ({
 
         <Divider my="xl" />
 
-        {/* Navigation Buttons */}
         <Group justify="space-between">
           <Button
             variant="outline"

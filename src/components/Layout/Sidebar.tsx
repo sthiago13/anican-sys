@@ -8,7 +8,9 @@ import {
   IconUserPlus,
   IconLogout,
 } from '@tabler/icons-react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '../UI/ConfirmModal';
+import { supabase } from '../../config/supabase';
 
 const RibbonIcon = ({ size = 22, color = '#ffffff' }: { size?: number; color?: string }) => (
   <svg
@@ -28,26 +30,22 @@ const RibbonIcon = ({ size = 22, color = '#ffffff' }: { size?: number; color?: s
   </svg>
 );
 
-export interface SidebarProps {
-  activeView: string;
-  onViewChange: (view: string) => void;
-  onLogout: () => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, onLogout }) => {
+export const Sidebar: React.FC = () => {
   const [logoutModalOpened, setLogoutModalOpened] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const menuItems = [
-    { value: 'dashboard', label: 'Panel de Control', icon: <IconDashboard size={18} stroke={1.5} /> },
-    { value: 'pacientes', label: 'Pacientes', icon: <IconUsers size={18} stroke={1.5} /> },
-    { value: 'registro', label: 'Nuevo Registro', icon: <IconUserPlus size={18} stroke={1.5} /> },
-    { value: 'donaciones', label: 'Donaciones', icon: <IconHeartHandshake size={18} stroke={1.5} /> },
-    { value: 'configuracion', label: 'Configuración', icon: <IconSettings size={18} stroke={1.5} /> },
+    { value: '/', label: 'Panel de Control', icon: <IconDashboard size={18} stroke={1.5} /> },
+    { value: '/pacientes', label: 'Pacientes', icon: <IconUsers size={18} stroke={1.5} /> },
+    { value: '/registro', label: 'Nuevo Registro', icon: <IconUserPlus size={18} stroke={1.5} /> },
+    { value: '/donaciones', label: 'Donaciones', icon: <IconHeartHandshake size={18} stroke={1.5} /> },
+    { value: '/configuracion', label: 'Configuración', icon: <IconSettings size={18} stroke={1.5} /> },
   ];
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setLogoutModalOpened(false);
-    onLogout();
+    await supabase.auth.signOut();
   };
 
   return (
@@ -101,24 +99,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, onLo
 
         {/* Navigation Items */}
         <Stack gap={4} p="md" style={{ flexGrow: 1 }}>
-          {menuItems.map((item) => (
-            <NavLink
-              key={item.value}
-              active={activeView === item.value}
-              label={item.label}
-              leftSection={item.icon}
-              onClick={() => onViewChange(item.value)}
-              color="orange"
-              variant="light"
-              styles={{
-                root: {
-                  borderRadius: 8,
-                  fontWeight: activeView === item.value ? 600 : 500,
-                  transition: 'all 0.15s ease',
-                },
-              }}
-            />
-          ))}
+          {menuItems.map((item) => {
+            const isActive = location.pathname === item.value;
+            return (
+              <NavLink
+                key={item.value}
+                active={isActive}
+                label={item.label}
+                leftSection={item.icon}
+                onClick={() => navigate(item.value)}
+                color="orange"
+                variant="light"
+                styles={{
+                  root: {
+                    borderRadius: 8,
+                    fontWeight: isActive ? 600 : 500,
+                    transition: 'all 0.15s ease',
+                  },
+                }}
+              />
+            );
+          })}
         </Stack>
 
         <Divider color="var(--anican-border)" />

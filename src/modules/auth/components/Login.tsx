@@ -14,12 +14,9 @@ import {
   Alert,
 } from '@mantine/core';
 import { IconLock, IconMail, IconAlertCircle } from '@tabler/icons-react';
-import loginHero from '../../assets/login_hero.png';
-import { supabase } from '../../config/supabase';
-
-export interface LoginProps {
-  onLoginSuccess: () => void;
-}
+import { useNavigate } from 'react-router-dom';
+import loginHero from '../../../assets/login_hero.png';
+import { supabase } from '../../../config/supabase';
 
 const GoldRibbonIcon = ({ size = 28 }: { size?: number }) => (
   <svg
@@ -39,7 +36,8 @@ const GoldRibbonIcon = ({ size = 28 }: { size?: number }) => (
   </svg>
 );
 
-export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
+export const Login: React.FC = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -63,15 +61,12 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       });
 
       if (authError) {
-        // En Supabase v2 los errores vienen directamente en el objeto retornado.
-        // No es necesario lanzar una excepción, se maneja el error de forma limpia.
         setError(authError.message || 'Error al iniciar sesión. Verifica tus credenciales.');
         return;
       }
 
-      onLoginSuccess();
+      navigate('/');
     } catch (err) {
-      // Catch de seguridad por si ocurre un fallo de red o error imprevisto
       setError('Ocurrió un error inesperado al conectar con el servidor.');
     } finally {
       setLoading(false);
@@ -100,7 +95,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           overflow: 'hidden',
         }}
       >
-        {/* Panel Izquierdo: Formulario */}
         <Paper
           shadow="xl"
           p={{ base: 32, sm: 48 }}
@@ -112,13 +106,11 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             justifyContent: 'center',
             borderTopLeftRadius: 16,
             borderBottomLeftRadius: 16,
-            // Responsive border radius removal on mobile
             borderTopRightRadius: 0,
             borderBottomRightRadius: 0,
           }}
         >
           <Stack gap="lg">
-            {/* Logo/Icono de cáncer infantil en Amarillo (#ffc22f) */}
             <Group gap="xs" align="center">
               <GoldRibbonIcon size={32} />
               <Box>
@@ -209,7 +201,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </Stack>
         </Paper>
 
-        {/* Panel Derecho: Identidad */}
         <Paper
           shadow="xl"
           radius={0}
@@ -227,10 +218,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             minHeight: 260,
           }}
         >
-          {/* Overlay oscuro (opacidad 0.4) para legibilidad */}
           <Overlay color="#000000" opacity={0.4} zIndex={1} />
-
-          {/* Contenido centrado sobre el Overlay */}
           <Stack
             gap="xs"
             align="center"
@@ -239,7 +227,6 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               textAlign: 'center',
             }}
           >
-            {/* Logo 'Anican' centrado en azul claro (#7fbbdd) con opacidad */}
             <Title
               order={1}
               style={{

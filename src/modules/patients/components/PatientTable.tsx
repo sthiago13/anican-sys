@@ -8,7 +8,7 @@ import {
   IconMapPin,
   IconUser,
 } from '@tabler/icons-react';
-import { IconButton } from '../UI/IconButton';
+import { IconButton } from '../../../components/UI/IconButton';
 
 // Interface alineada a la tabla `pacientes` de Supabase
 export interface Paciente {
