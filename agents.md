@@ -25,3 +25,7 @@ Sistema de planificación de recursos (ERP) y gestión administrativa interna pa
 - El diseño visual del Dashboard, Login y Gestión de Pacientes se encuentra completado con datos simulados (Mocks).
 - **Tarea Prioritaria:** Migrar el estado local en memoria hacia consultas asíncronas directas utilizando el cliente expuesto en `src/config/supabase.ts`.
 - **Siguiente Módulo:** Implementar interfaces operativas y flujos lógicos para el control de inventario de ayudas institucionales y reportes financieros de donaciones.
+
+## Uso estricto de pnpm
+- Siempre que se instale una nueva dependencia se debe usar "pnpm add <nombre_de_la_dependencia>"
+- Nunca usar "npm add <nombre_de_la_dependencia>"

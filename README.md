@@ -1,73 +1,52 @@
-# React + TypeScript + Vite
+# Fundación Anican - ERP y Sistema de Gestión
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Sistema de planificación de recursos y gestión administrativa interna para la Fundación Anican. Permite administrar expedientes médicos de pacientes pediátricos oncológicos y controlar el inventario de ayudas institucionales.
 
-Currently, two official plugins are available:
+## Stack Tecnológico
+- **Frontend:** React 19, TypeScript, Vite
+- **UI:** Mantine v9
+- **Backend:** Supabase (PostgreSQL + GoTrue Auth)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Configuración del Entorno (Local / Nube)
 
-## React Compiler
+1. **Instalar dependencias** (uso estricto de pnpm):
+   ```bash
+   pnpm install
+   ```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+2. **Variables de Entorno:**
+   Copia el archivo `.env.example` a un nuevo archivo llamado `.env.local` y configura tus llaves:
+   ```env
+   VITE_SUPABASE_URL=tu_url_de_supabase_cloud
+   VITE_SUPABASE_ANON_KEY=tu_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=tu_service_role_key_secreto
 
-## Expanding the ESLint configuration
+   # Credenciales para el administrador por defecto
+   ADMIN_EMAIL=admin@anican.org
+   ADMIN_PASSWORD=admin12345
+   ```
+   > **Nota:** La llave `SUPABASE_SERVICE_ROLE_KEY` es estrictamente necesaria para el script de inicialización de usuarios. Nunca la expongas en el código frontend.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Inicializar el Proyecto (Seed del Administrador)
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+Para poder iniciar sesión por primera vez y probar la aplicación, necesitas tener un usuario **Administrador** registrado. Hemos preparado un script oficial en NodeJS que utiliza la API de Supabase para insertarlo de forma segura (compatible con entornos locales y proyectos en la nube).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Ejecuta el siguiente comando en tu terminal (requiere Node 20+ para leer el `--env-file`):
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+node --env-file=.env.local scripts/seed-admin.js
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Este comando se encargará de:
+1. Crear el usuario nativamente en el módulo de Autenticación (GoTrue).
+2. Crear y vincular su perfil público asignándole el rol `Administrador` en la tabla `perfiles`.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Iniciar el Servidor de Desarrollo
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+Una vez configuradas las variables y creado el administrador:
+
+```bash
+pnpm run dev
 ```
+
+Abre tu navegador, entra a la dirección local e inicia sesión con las credenciales por defecto (`admin@anican.org` / `admin12345`).

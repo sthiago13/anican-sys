@@ -26,6 +26,7 @@ import { SearchInput } from './components/UI/SearchInput';
 import { FilterDropdown } from './components/UI/FilterDropdown';
 import { Button } from './components/UI/Button';
 import { Login } from './components/Feature/Login';
+import { supabase } from './config/supabase';
 
 const theme = createTheme({
   primaryColor: 'orange',
@@ -181,6 +182,11 @@ function App() {
     setActiveView('registro');
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsAuthenticated(false);
+  };
+
   // Stats calculation
   const totalPacientes = pacientes.length;
   const enTratamiento = pacientes.filter((p) => p.estado === 'Activo').length;
@@ -206,7 +212,7 @@ function App() {
     <MantineProvider theme={theme}>
       <Box style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--anican-bg)' }}>
         {/* Sidebar Nav */}
-        <Sidebar activeView={activeView} onViewChange={setActiveView} />
+        <Sidebar activeView={activeView} onViewChange={setActiveView} onLogout={handleLogout} />
 
         {/* Main Workspace */}
         <Box style={{ flexGrow: 1, padding: 32, maxWidth: 'calc(100% - 260px)' }}>

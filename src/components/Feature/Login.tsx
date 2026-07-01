@@ -15,6 +15,7 @@ import {
 } from '@mantine/core';
 import { IconLock, IconMail, IconAlertCircle } from '@tabler/icons-react';
 import loginHero from '../../assets/login_hero.png';
+import { supabase } from '../../config/supabase';
 
 export interface LoginProps {
   onLoginSuccess: () => void;
@@ -44,7 +45,7 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
 
@@ -55,11 +56,26 @@ export const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
     setLoading(true);
 
-    // Mock authentication: accepts any credentials for demo purposes
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password: password.trim(),
+      });
+
+      if (authError) {
+        // En Supabase v2 los errores vienen directamente en el objeto retornado.
+        // No es necesario lanzar una excepción, se maneja el error de forma limpia.
+        setError(authError.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+        return;
+      }
+
       onLoginSuccess();
-    }, 1000);
+    } catch (err) {
+      // Catch de seguridad por si ocurre un fallo de red o error imprevisto
+      setError('Ocurrió un error inesperado al conectar con el servidor.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
