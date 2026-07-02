@@ -47,7 +47,7 @@ interface EditPatientModalProps {
       telefono_1?: string;
       telefono_2?: string;
       residencia?: string;
-    }
+    },
   ) => Promise<void>;
 }
 
@@ -84,7 +84,9 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
     if (paciente) {
       setPacNombres(paciente.nombres || "");
       setPacApellidos(paciente.apellidos || "");
-      setFechaNacimiento(paciente.fecha_nacimiento ? new Date(paciente.fecha_nacimiento) : null);
+      setFechaNacimiento(
+        paciente.fecha_nacimiento ? new Date(paciente.fecha_nacimiento) : null,
+      );
       setDiagnostico(paciente.diagnostico || "");
       setSexo(paciente.sexo || null);
       setEstado(paciente.estado || "Activo");
@@ -103,20 +105,28 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    
+
     // Representante validation
     if (!cedula.trim()) newErrors.cedula = "La cédula es obligatoria";
-    if (!repNombres.trim()) newErrors.repNombres = "El nombre del representante es obligatorio";
+    if (!repNombres.trim())
+      newErrors.repNombres = "El nombre del representante es obligatorio";
 
     // Paciente validation
-    if (!pacNombres.trim()) newErrors.pacNombres = "Los nombres son obligatorios";
-    if (!pacApellidos.trim()) newErrors.pacApellidos = "Los apellidos son obligatorios";
-    if (!fechaNacimiento) newErrors.fechaNacimiento = "La fecha de nacimiento es obligatoria";
+    if (!pacNombres.trim())
+      newErrors.pacNombres = "Los nombres son obligatorios";
+    if (!pacApellidos.trim())
+      newErrors.pacApellidos = "Los apellidos son obligatorios";
+    if (!fechaNacimiento)
+      newErrors.fechaNacimiento = "La fecha de nacimiento es obligatoria";
 
     setErrors(newErrors);
-    
+
     if (Object.keys(newErrors).length > 0) {
-      if (newErrors.pacNombres || newErrors.pacApellidos || newErrors.fechaNacimiento) {
+      if (
+        newErrors.pacNombres ||
+        newErrors.pacApellidos ||
+        newErrors.fechaNacimiento
+      ) {
         setActiveTab("paciente");
       } else {
         setActiveTab("representante");
@@ -131,8 +141,10 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
     setLoading(true);
     setError(null);
     try {
-      const fechaNacStr = fechaNacimiento ? fechaNacimiento.toISOString().split("T")[0] : "";
-      
+      const fechaNacStr = fechaNacimiento
+        ? fechaNacimiento.toISOString().split("T")[0]
+        : "";
+
       await onSave(
         paciente.id,
         {
@@ -150,7 +162,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
           telefono_1: telefono1,
           telefono_2: telefono2,
           residencia,
-        }
+        },
       );
       onClose();
     } catch (err: unknown) {
@@ -158,7 +170,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
       setError(
         err instanceof Error
           ? err.message
-          : "Ocurrió un error inesperado al guardar los cambios."
+          : "Ocurrió un error inesperado al guardar los cambios.",
       );
     } finally {
       setLoading(false);
@@ -195,10 +207,16 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
 
         <Tabs value={activeTab} onChange={setActiveTab} color="orange">
           <Tabs.List>
-            <Tabs.Tab value="paciente" leftSection={<IconStethoscope size={16} />}>
+            <Tabs.Tab
+              value="paciente"
+              leftSection={<IconStethoscope size={16} />}
+            >
               Paciente
             </Tabs.Tab>
-            <Tabs.Tab value="representante" leftSection={<IconUser size={16} />}>
+            <Tabs.Tab
+              value="representante"
+              leftSection={<IconUser size={16} />}
+            >
               Representante
             </Tabs.Tab>
           </Tabs.List>
@@ -248,7 +266,9 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
                   required
                   leftSection={<IconCalendar size={16} stroke={1.5} />}
                   value={fechaNacimiento}
-                  onChange={(date) => setFechaNacimiento(new Date(date))}
+                  onChange={(date) =>
+                    setFechaNacimiento(date ? new Date(date) : null)
+                  }
                   maxDate={new Date()}
                   error={errors.fechaNacimiento}
                   styles={{
@@ -418,7 +438,12 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
         </Tabs>
 
         <Group justify="flex-end" mt="md">
-          <Button variant="outline" color="gray" onClick={onClose} disabled={loading}>
+          <Button
+            variant="outline"
+            color="gray"
+            onClick={onClose}
+            disabled={loading}
+          >
             Cancelar
           </Button>
           <Button onClick={handleSave} loading={loading}>

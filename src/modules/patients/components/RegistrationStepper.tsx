@@ -27,7 +27,7 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/UI/Button";
-import type { Representante } from "./PatientTable";
+import { type Representante } from "../types";
 import { supabase } from "../../../config/supabase";
 
 import "@mantine/dates/styles.css";
@@ -115,16 +115,22 @@ export const RegistrationStepper: React.FC = () => {
         .single();
 
       if (repError) {
-        throw new Error(`Error al registrar el representante: ${repError.message}`);
+        throw new Error(
+          `Error al registrar el representante: ${repError.message}`,
+        );
       }
 
       if (!repData) {
-        throw new Error("No se recibió la confirmación del representante registrado.");
+        throw new Error(
+          "No se recibió la confirmación del representante registrado.",
+        );
       }
 
       insertedRep = repData as Representante;
 
-      const fechaNacStr = fechaNacimiento ? fechaNacimiento.toISOString().split("T")[0] : "";
+      const fechaNacStr = fechaNacimiento
+        ? fechaNacimiento.toISOString().split("T")[0]
+        : "";
       const pacienteData = {
         nombres: pacNombres.trim(),
         apellidos: pacApellidos.trim(),
@@ -146,7 +152,9 @@ export const RegistrationStepper: React.FC = () => {
       }
 
       if (!pacData) {
-        throw new Error("No se recibió la confirmación del paciente registrado.");
+        throw new Error(
+          "No se recibió la confirmación del paciente registrado.",
+        );
       }
       setSuccess(true);
 
@@ -158,9 +166,15 @@ export const RegistrationStepper: React.FC = () => {
 
       if (insertedRep && insertedRep.id) {
         try {
-          await supabase.from("representantes").delete().eq("id", insertedRep.id);
+          await supabase
+            .from("representantes")
+            .delete()
+            .eq("id", insertedRep.id);
         } catch (cleanupErr) {
-          console.error("Error al limpiar el representante huérfano:", cleanupErr);
+          console.error(
+            "Error al limpiar el representante huérfano:",
+            cleanupErr,
+          );
         }
       }
 
@@ -202,8 +216,8 @@ export const RegistrationStepper: React.FC = () => {
             ¡Registro Exitoso!
           </Title>
           <Text c="dimmed" ta="center">
-            El representante y el paciente han sido registrados correctamente en el sistema.
-            Redirigiendo...
+            El representante y el paciente han sido registrados correctamente en
+            el sistema. Redirigiendo...
           </Text>
         </Stack>
       </Card>
