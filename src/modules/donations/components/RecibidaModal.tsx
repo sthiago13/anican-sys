@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Modal, TextInput, Select, Textarea, Stack, Alert, Group, Switch, NumberInput } from "@mantine/core";
+import { Modal, TextInput, Select, Textarea, Stack, Alert, Group, Switch, NumberInput, Text, Divider } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
+import { supabase } from "../../../config/supabase";
 import { normalizeDateInput, formatLocalDate } from "../../../utils/date";
 
 interface RecibidaModalProps {
@@ -17,8 +18,15 @@ interface RecibidaModalProps {
     moneda: string,
     montoOriginal: number | null,
     tasaCambio: number | null,
-    montoEquivalenteUsd: number | null
+    montoEquivalenteUsd: number | null,
+    idAyuda: string | null
   ) => Promise<void>;
+}
+
+interface AyudaSelectOption {
+  id: string;
+  nombre_articulo: string;
+  categoria: string;
 }
 
 export function RecibidaModal({
@@ -34,8 +42,12 @@ export function RecibidaModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Multimoneda
-  const [esMonetario, setEsMonetario] = useState(false);
+  // Catálogo de Ayudas
+  const [idAyuda, setIdAyuda] = useState<string | null>(null);
+  const [catalogoAyudas, setCatalogoAyudas] = useState<AyudaSelectOption[]>([]);
+
+  // Valoración Financiera
+  const [esMonetario, setEsMonetario] = useState(true);
   const [moneda, setMoneda] = useState<string | null>("USD");
   const [montoOriginal, setMontoOriginal] = useState<number | string>("");
   const [tasaCambio, setTasaCambio] = useState<number | string>(1);
@@ -47,11 +59,27 @@ export function RecibidaModal({
       setMetodoIngreso("Transferencia");
       setMontoOCantidad("");
       setObservaciones("");
-      setEsMonetario(false);
+      setEsMonetario(true);
       setMoneda("USD");
       setMontoOriginal("");
       setTasaCambio(1);
+      setIdAyuda(null);
       setError(null);
+
+      // Cargar Catálogo de Ayudas al abrir
+      const loadRelations = async () => {
+        try {
+          const { data } = await supabase
+            .from("catalogo_ayudas")
+            .select("id, nombre_articulo, categoria")
+            .order("nombre_articulo", { ascending: true });
+          setCatalogoAyudas(data || []);
+        } catch (err) {
+          console.error("Error al cargar ayudas en modal de ingresos:", err);
+        }
+      };
+
+      void loadRelations();
     }
   }, [opened]);
 
@@ -65,6 +93,15 @@ export function RecibidaModal({
       setTasaCambio(4000); // Tasa estimada inicial editable
     }
   }, [moneda]);
+
+  // Si cambia el método de ingreso a "En Especie", sugerimos desactivar o adecuar la valoración
+  useEffect(() => {
+    if (metodoIngreso === "En Especie") {
+      setEsMonetario(false);
+    } else {
+      setEsMonetario(true);
+    }
+  }, [metodoIngreso]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -80,8 +117,11 @@ export function RecibidaModal({
       setError("El método de ingreso es requerido");
       return;
     }
+    if (!montoOCantidad.trim()) {
+      setError("El detalle de la donación (qué se recibió) es requerido");
+      return;
+    }
 
-    let finalMontoOCantidad = montoOCantidad;
     let finalMontoOriginal: number | null = null;
     let finalTasaCambio: number | null = null;
     let finalMontoEquivalenteUsd: number | null = null;
@@ -91,7 +131,7 @@ export function RecibidaModal({
       const tasaNum = Number(tasaCambio);
 
       if (isNaN(origNum) || origNum <= 0) {
-        setError("El monto de la donación debe ser mayor que 0");
+        setError("El monto de valoración contable debe ser mayor que 0");
         return;
       }
       if (isNaN(tasaNum) || tasaNum <= 0) {
@@ -102,17 +142,6 @@ export function RecibidaModal({
       finalMontoOriginal = origNum;
       finalTasaCambio = tasaNum;
       finalMontoEquivalenteUsd = origNum / tasaNum;
-
-      // Componer el texto de monto o cantidad automáticamente
-      finalMontoOCantidad = `${moneda} ${origNum.toLocaleString("es-ES", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      })}`;
-    } else {
-      if (!montoOCantidad.trim()) {
-        setError("El detalle de monto o cantidad es requerido");
-        return;
-      }
     }
 
     setLoading(true);
@@ -130,12 +159,13 @@ export function RecibidaModal({
         fechaString,
         entidadDonante,
         metodoIngreso,
-        finalMontoOCantidad,
+        montoOCantidad.trim(),
         observaciones,
         esMonetario ? (moneda || "USD") : "USD",
         finalMontoOriginal,
         finalTasaCambio,
-        finalMontoEquivalenteUsd
+        finalMontoEquivalenteUsd,
+        idAyuda
       );
       onClose();
     } catch (err: any) {
@@ -145,6 +175,16 @@ export function RecibidaModal({
       setLoading(false);
     }
   };
+
+  const ayudaOptions = catalogoAyudas.map((a) => ({
+    value: a.id,
+    label: `[${a.categoria}] ${a.nombre_articulo}`,
+  }));
+
+  // Calcular equivalencia en USD para previsualización en vivo
+  const numOrig = Number(montoOriginal) || 0;
+  const numTasa = Number(tasaCambio) || 1;
+  const equivalenciaUsdCalculada = numOrig / numTasa;
 
   return (
     <Modal
@@ -225,8 +265,44 @@ export function RecibidaModal({
             }}
           />
 
+          <Select
+            label="Categoría / Artículo del Catálogo (Opcional)"
+            placeholder="Asociar a un artículo del catálogo"
+            searchable
+            clearable
+            data={ayudaOptions}
+            value={idAyuda}
+            onChange={setIdAyuda}
+            styles={{
+              label: {
+                fontWeight: 600,
+                color: "var(--anican-azul-oscuro)",
+                marginBottom: 4,
+              },
+              input: { borderRadius: 8 },
+            }}
+          />
+
+          <Divider my="xs" />
+
+          <TextInput
+            label="Detalle / Descripción de la Donación"
+            placeholder="Ej. 10 cajas de Ensure, 5 botes de Medicamento, Aporte monetario"
+            required
+            value={montoOCantidad}
+            onChange={(e) => setMontoOCantidad(e.target.value)}
+            styles={{
+              label: {
+                fontWeight: 600,
+                color: "var(--anican-azul-oscuro)",
+                marginBottom: 4,
+              },
+              input: { borderRadius: 8 },
+            }}
+          />
+
           <Switch
-            label="¿Es una donación puramente monetaria?"
+            label="¿Deseas registrar una valoración financiera/equivalente de esta donación?"
             checked={esMonetario}
             onChange={(e) => setEsMonetario(e.currentTarget.checked)}
             styles={{
@@ -237,11 +313,11 @@ export function RecibidaModal({
             }}
           />
 
-          {esMonetario ? (
+          {esMonetario && (
             <Stack gap="xs">
               <Group grow>
                 <NumberInput
-                  label="Monto de la Donación"
+                  label="Monto Estimado / Donado"
                   placeholder="Ej. 500"
                   required
                   min={0.01}
@@ -279,7 +355,7 @@ export function RecibidaModal({
                 />
               </Group>
 
-              {moneda !== "USD" && (
+              {moneda !== "USD" ? (
                 <NumberInput
                   label={`Tasa de Cambio (1 USD = ? ${moneda})`}
                   placeholder="Ej. 40.5"
@@ -297,24 +373,35 @@ export function RecibidaModal({
                     input: { borderRadius: 8 },
                   }}
                 />
+              ) : (
+                <TextInput
+                  label="Valor Contable (USD)"
+                  value={`$ ${numOrig.toFixed(2)} USD`}
+                  disabled
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8, backgroundColor: "var(--anican-bg)" },
+                  }}
+                />
+              )}
+
+              {moneda !== "USD" && (
+                <Text size="xs" c="dimmed" fw={600} ta="right" mt={-2}>
+                  Equivalente contable:{" "}
+                  <strong style={{ color: "green" }}>
+                    $ {equivalenciaUsdCalculada.toLocaleString("es-ES", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    USD
+                  </strong>
+                </Text>
               )}
             </Stack>
-          ) : (
-            <TextInput
-              label="Detalle / Cantidad Recibida"
-              placeholder="Ej. 30 cajas de Ensure, 5 cajas de Medicamentos, Ropa variada"
-              required
-              value={montoOCantidad}
-              onChange={(e) => setMontoOCantidad(e.target.value)}
-              styles={{
-                label: {
-                  fontWeight: 600,
-                  color: "var(--anican-azul-oscuro)",
-                  marginBottom: 4,
-                },
-                input: { borderRadius: 8 },
-              }}
-            />
           )}
 
           <Textarea

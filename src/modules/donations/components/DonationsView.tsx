@@ -48,6 +48,10 @@ export function DonationsView() {
     (acc, curr) => acc + (Number(curr.monto_equivalente) || 0),
     0
   );
+  const totalRecibidoMonetario = recibidas.reduce(
+    (acc, curr) => acc + (Number(curr.monto_equivalente_usd) || 0),
+    0
+  );
   const totalRecibidasCount = recibidas.length;
   const totalEntregadasCount = entregadas.length;
 
@@ -117,8 +121,11 @@ export function DonationsView() {
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 4 }}>
           <StatCard
-            title="Aportes Recibidos"
-            value={`${totalRecibidasCount} ingresos`}
+            title="Total Donado / Recibido"
+            value={`$ ${totalRecibidoMonetario.toLocaleString("es-ES", {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
             icon={<IconHeartHandshake size={24} />}
             color="blue"
           />
@@ -137,10 +144,10 @@ export function DonationsView() {
         <Tabs value={activeTab} onChange={setActiveTab} color="orange" variant="outline">
           <Tabs.List mb="md">
             <Tabs.Tab value="recibidas" leftSection={<IconHeartHandshake size={16} />}>
-              Ingresos (Donaciones Recibidas)
+              Ingresos (Donaciones Recibidas) ({totalRecibidasCount})
             </Tabs.Tab>
             <Tabs.Tab value="entregadas" leftSection={<IconCash size={16} />}>
-              Egresos (Ayudas Entregadas)
+              Egresos (Ayudas Entregadas) ({totalEntregadasCount})
             </Tabs.Tab>
           </Tabs.List>
 
@@ -196,9 +203,33 @@ export function DonationsView() {
                           </Badge>
                         </Table.Td>
                         <Table.Td>
+                          {r.catalogo_ayudas && (
+                            <Badge color="gray" variant="light" size="xs" mb={4} style={{ display: "block", width: "fit-content" }}>
+                              {r.catalogo_ayudas.nombre_articulo}
+                            </Badge>
+                          )}
                           <Text size="sm" fw={700} c="teal">
                             {r.monto_o_cantidad}
                           </Text>
+                          {r.monto_original && r.moneda && (
+                            <Text size="xs" c="dimmed" mt={2}>
+                              Valoración:{" "}
+                              <strong>
+                                {r.monto_original.toLocaleString("es-ES")}{" "}
+                                {r.moneda}
+                              </strong>{" "}
+                              {r.moneda !== "USD" && r.monto_equivalente_usd && (
+                                <>
+                                  (Equiv: ${" "}
+                                  {r.monto_equivalente_usd.toLocaleString("es-ES", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}{" "}
+                                  USD)
+                                </>
+                              )}
+                            </Text>
+                          )}
                         </Table.Td>
                         <Table.Td style={{ maxWidth: 200 }}>
                           <Text size="sm" c="dimmed" truncate="end">

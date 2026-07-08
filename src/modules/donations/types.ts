@@ -11,6 +11,13 @@ export interface DonacionRecibida {
   monto_original?: number;
   tasa_cambio?: number;
   monto_equivalente_usd?: number;
+  id_ayuda?: string;
+
+  // Relacionales del Frontend
+  catalogo_ayudas?: {
+    nombre_articulo: string;
+    categoria: string;
+  };
 }
 
 export interface DonacionEntregada {

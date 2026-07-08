@@ -67,7 +67,8 @@ export function EntregadaModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Multimoneda
+  // Multimoneda y Valoración
+  const [esMonetario, setEsMonetario] = useState(true); // Por defecto activo para incentivar el registro del costo
   const [moneda, setMoneda] = useState<string | null>("USD");
   const [montoOriginal, setMontoOriginal] = useState<number | string>(0);
   const [tasaCambio, setTasaCambio] = useState<number | string>(1);
@@ -88,6 +89,7 @@ export function EntregadaModal({
       setMontoOriginal(0);
       setTasaCambio(1);
       setMoneda("USD");
+      setEsMonetario(true);
       setConSoporte(false);
       setObservaciones("");
       setError(null);
@@ -159,19 +161,27 @@ export function EntregadaModal({
       return;
     }
 
-    const origNum = Number(montoOriginal);
-    if (isNaN(origNum) || origNum < 0) {
-      setError("El monto original no puede ser menor que 0");
-      return;
-    }
+    let finalMontoOriginal = 0;
+    let finalTasaCambio = 1;
+    let finalMontoEquivalente = 0;
 
-    const tasaNum = Number(tasaCambio);
-    if (isNaN(tasaNum) || tasaNum <= 0) {
-      setError("La tasa de cambio debe ser mayor que 0");
-      return;
-    }
+    if (esMonetario) {
+      const origNum = Number(montoOriginal);
+      if (isNaN(origNum) || origNum < 0) {
+        setError("El monto original no puede ser menor que 0");
+        return;
+      }
 
-    const eqUsd = origNum / tasaNum;
+      const tasaNum = Number(tasaCambio);
+      if (isNaN(tasaNum) || tasaNum <= 0) {
+        setError("La tasa de cambio debe ser mayor que 0");
+        return;
+      }
+
+      finalMontoOriginal = origNum;
+      finalTasaCambio = tasaNum;
+      finalMontoEquivalente = origNum / tasaNum;
+    }
 
     setLoading(true);
     setError(null);
@@ -191,12 +201,12 @@ export function EntregadaModal({
         idAyuda,
         metodoEntrega,
         cantNum,
-        eqUsd, // Guardamos el equivalente contable en USD
+        finalMontoEquivalente, // Guardamos el equivalente contable en USD
         conSoporte,
         observaciones,
-        moneda || "USD",
-        origNum,
-        tasaNum
+        esMonetario ? (moneda || "USD") : "USD",
+        finalMontoOriginal,
+        finalTasaCambio
       );
       onClose();
     } catch (err: any) {
@@ -217,7 +227,7 @@ export function EntregadaModal({
     label: `[${a.categoria}] ${a.nombre_articulo}`,
   }));
 
-  // Calcular equivalencia en USD para previsualización
+  // Calcular equivalencia en USD para previsualización en vivo
   const numOrig = Number(montoOriginal) || 0;
   const numTasa = Number(tasaCambio) || 1;
   const equivalenciaUsdCalculada = numOrig / numTasa;
@@ -360,109 +370,123 @@ export function EntregadaModal({
             }}
           />
 
-          <Group grow>
-            <NumberInput
-              label="Cantidad"
-              required
-              min={1}
-              value={cantidad}
-              onChange={setCantidad}
-              styles={{
-                label: {
-                  fontWeight: 600,
-                  color: "var(--anican-azul-oscuro)",
-                  marginBottom: 4,
-                },
-                input: { borderRadius: 8 },
-              }}
-            />
+          <TextInput
+            label="Cantidad / Unidades a Entregar"
+            type="number"
+            required
+            value={cantidad}
+            onChange={(e) => setCantidad(e.target.value)}
+            styles={{
+              label: {
+                fontWeight: 600,
+                color: "var(--anican-azul-oscuro)",
+                marginBottom: 4,
+              },
+              input: { borderRadius: 8 },
+            }}
+          />
 
-            <Select
-              label="Moneda"
-              required
-              data={[
-                { value: "USD", label: "Dólares (USD)" },
-                { value: "VES", label: "Bolívares (VES)" },
-                { value: "COP", label: "Pesos (COP)" },
-              ]}
-              value={moneda}
-              onChange={setMoneda}
-              styles={{
-                label: {
-                  fontWeight: 600,
-                  color: "var(--anican-azul-oscuro)",
-                  marginBottom: 4,
-                },
-                input: { borderRadius: 8 },
-              }}
-            />
-          </Group>
+          <Switch
+            label="¿Registrar costo / valoración financiera de la entrega?"
+            checked={esMonetario}
+            onChange={(e) => setEsMonetario(e.currentTarget.checked)}
+            styles={{
+              label: {
+                fontWeight: 600,
+                color: "var(--anican-azul-oscuro)",
+              },
+            }}
+          />
 
-          <Group grow>
-            <NumberInput
-              label="Monto a Entregar (Original)"
-              placeholder="Ej. 100"
-              required
-              min={0}
-              decimalScale={2}
-              value={montoOriginal}
-              onChange={setMontoOriginal}
-              styles={{
-                label: {
-                  fontWeight: 600,
-                  color: "var(--anican-azul-oscuro)",
-                  marginBottom: 4,
-                },
-                input: { borderRadius: 8 },
-              }}
-            />
+          {esMonetario && (
+            <Stack gap="xs">
+              <Group grow>
+                <NumberInput
+                  label="Monto a Entregar (Original)"
+                  placeholder="Ej. 100"
+                  required
+                  min={0}
+                  decimalScale={2}
+                  value={montoOriginal}
+                  onChange={setMontoOriginal}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
 
-            {moneda !== "USD" ? (
-              <NumberInput
-                label={`Tasa de Cambio (1 USD = ? ${moneda})`}
-                placeholder="Ej. 40.5"
-                required
-                min={0.0001}
-                decimalScale={4}
-                value={tasaCambio}
-                onChange={setTasaCambio}
-                styles={{
-                  label: {
-                    fontWeight: 600,
-                    color: "var(--anican-azul-oscuro)",
-                    marginBottom: 4,
-                  },
-                  input: { borderRadius: 8 },
-                }}
-              />
-            ) : (
-              <TextInput
-                label="Valor Contable (USD)"
-                value={`$ ${numOrig.toFixed(2)} USD`}
-                disabled
-                styles={{
-                  label: {
-                    fontWeight: 600,
-                    color: "var(--anican-azul-oscuro)",
-                    marginBottom: 4,
-                  },
-                  input: { borderRadius: 8, backgroundColor: "var(--anican-bg)" },
-                }}
-              />
-            )}
-          </Group>
+                <Select
+                  label="Moneda"
+                  required
+                  data={[
+                    { value: "USD", label: "Dólares (USD)" },
+                    { value: "VES", label: "Bolívares (VES)" },
+                    { value: "COP", label: "Pesos (COP)" },
+                  ]}
+                  value={moneda}
+                  onChange={setMoneda}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
+              </Group>
 
-          {moneda !== "USD" && (
-            <Text size="xs" c="dimmed" fw={600} ta="right" mt={-6}>
-              Equivalente contable:{" "}
-              <strong style={{ color: "green" }}>
-                $ {equivalenciaUsdCalculada.toLocaleString("es-ES", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}{" "}
-                USD
-              </strong>
-            </Text>
+              {moneda !== "USD" ? (
+                <NumberInput
+                  label={`Tasa de Cambio (1 USD = ? ${moneda})`}
+                  placeholder="Ej. 40.5"
+                  required
+                  min={0.0001}
+                  decimalScale={4}
+                  value={tasaCambio}
+                  onChange={setTasaCambio}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
+              ) : (
+                <TextInput
+                  label="Valor Contable (USD)"
+                  value={`$ ${numOrig.toFixed(2)} USD`}
+                  disabled
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8, backgroundColor: "var(--anican-bg)" },
+                  }}
+                />
+              )}
+
+              {moneda !== "USD" && (
+                <Text size="xs" c="dimmed" fw={600} ta="right" mt={-2}>
+                  Equivalente contable:{" "}
+                  <strong style={{ color: "green" }}>
+                    $ {equivalenciaUsdCalculada.toLocaleString("es-ES", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    USD
+                  </strong>
+                </Text>
+              )}
+            </Stack>
           )}
 
           <Switch

@@ -15,7 +15,13 @@ export function useDonations() {
       // 1. Cargar Donaciones Recibidas (Ingresos)
       const { data: recData, error: recError } = await supabase
         .from("donaciones_recibidas")
-        .select("*")
+        .select(`
+          *,
+          catalogo_ayudas (
+            nombre_articulo,
+            categoria
+          )
+        `)
         .order("fecha", { ascending: false });
 
       if (recError) throw recError;
@@ -58,7 +64,8 @@ export function useDonations() {
     moneda: string,
     montoOriginal: number | null,
     tasaCambio: number | null,
-    montoEquivalenteUsd: number | null
+    montoEquivalenteUsd: number | null,
+    idAyuda: string | null
   ) => {
     setLoading(true);
     try {
@@ -74,6 +81,7 @@ export function useDonations() {
           monto_original: montoOriginal,
           tasa_cambio: tasaCambio,
           monto_equivalente_usd: montoEquivalenteUsd,
+          id_ayuda: idAyuda,
         },
       ]);
 
