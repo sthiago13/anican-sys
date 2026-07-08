@@ -25,6 +25,19 @@ Sistema de planificación de recursos (ERP) y gestión administrativa interna pa
 5. **Feature-Driven Architecture:** Todo nuevo módulo de negocio debe ser creado dentro de `src/modules/<nombre-del-modulo>/` con sus respectivos `components` y `hooks`. `App.tsx` debe permanecer únicamente como el proveedor global de contextos (`MantineProvider`, `RouterProvider`).
 6. **Uso Controlado de GitHub CLI y Git:** La interacción con el repositorio remoto a través de `git` y `gh` debe realizarse de forma consciente y controlada, asegurando que la revisión de issues, creación de ramas, commits y pull requests estén explícitamente justificados y vinculados a las tareas prioritarias del proyecto.
 
+## Flujo de Trabajo en GitHub (Git y gh)
+1. **Gestión de Issues:** Consultar issues abiertos usando `gh issue list` antes de iniciar tareas, y crear nuevos con labels correspondientes al detectar bugs o mejoras.
+2. **Formato de Commits:** Utilizar el estándar de commits convencionales (ej: `feat(scope): descripción` o `fix(scope): descripción`) escritos **en español** para cada contribución.
+3. **Cierre Automático de Issues:** Incluir palabras clave como `closes #XX` o `resolves #XX` en el mensaje del commit para cerrar automáticamente los issues correspondientes al fusionar o empujar cambios a la rama principal de GitHub.
+
+## Funcionamiento del Sistema de Temas (Claro/Oscuro)
+Para que los nuevos módulos y componentes visuales respondan de forma consistente al tema activo:
+1. **Uso de Variables CSS Semánticas:** No hardcodear colores hexadecimales o RGB en estilos inline o locales. Usar las variables del sistema (ej: `var(--anican-bg)`, `var(--anican-bg-card)`, `var(--anican-border)`, `var(--anican-text)`, y `var(--anican-azul-oscuro)`) declaradas en `src/index.css`.
+2. **Adaptabilidad en Modo Oscuro:**
+   - La paleta se adapta dinámicamente mediante el selector `[data-mantine-color-scheme="dark"]` en `src/index.css`.
+   - Si añades una nueva variable de color institucional, asegúrate de definir su contraparte de alto contraste bajo el selector de modo oscuro.
+3. **Consumo de Hook de Mantine:** Si requieres lógica o estilos condicionales basados en el esquema de color, utiliza el hook `useMantineColorScheme()` de `@mantine/core`.
+
 
 ## Estado Actual y Próximos Pasos
 - La arquitectura del proyecto ha sido migrada exitosamente a un modelo **Feature-Driven** con enrutamiento declarativo usando `react-router-dom`.
