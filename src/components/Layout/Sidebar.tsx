@@ -11,6 +11,7 @@ import {
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '../UI/ConfirmModal';
 import { supabase } from '../../config/supabase';
+import { useAuth } from '../../modules/auth/hooks/useAuth';
 
 const RibbonIcon = ({ size = 22, color = '#ffffff' }: { size?: number; color?: string }) => (
   <svg
@@ -34,6 +35,16 @@ export const Sidebar: React.FC = () => {
   const [logoutModalOpened, setLogoutModalOpened] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, perfil } = useAuth();
+
+  const getInitials = (nombres?: string) => {
+    if (!nombres) return "US";
+    const parts = nombres.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return parts[0].slice(0, 2).toUpperCase();
+  };
 
   const menuItems = [
     { value: '/', label: 'Panel de Control', icon: <IconDashboard size={18} stroke={1.5} /> },
@@ -141,14 +152,14 @@ export const Sidebar: React.FC = () => {
               flexShrink: 0,
             }}
           >
-            AN
+            {getInitials(perfil?.nombres)}
           </Box>
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <Text size="sm" fw={700} c="var(--anican-azul-oscuro)" truncate>
-              Admin Anican
+              {perfil?.nombres || 'Cargando...'}
             </Text>
             <Text size="xs" c="dimmed" truncate>
-              admin@anican.org
+              {user?.email || '—'}
             </Text>
           </div>
           <ActionIcon 
