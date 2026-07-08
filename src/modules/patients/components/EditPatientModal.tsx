@@ -22,6 +22,7 @@ import {
 } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import type { Paciente, Representante, Diagnostico } from "../types";
+import { formatLocalDate, normalizeDateInput } from "../../../utils/date";
 
 import "@mantine/dates/styles.css";
 
@@ -86,9 +87,12 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
     if (paciente) {
       setPacNombres(paciente.nombres || "");
       setPacApellidos(paciente.apellidos || "");
-      setFechaNacimiento(
-        paciente.fecha_nacimiento ? new Date(paciente.fecha_nacimiento) : null,
-      );
+      if (paciente.fecha_nacimiento) {
+        const [year, month, day] = paciente.fecha_nacimiento.split("-").map(Number);
+        setFechaNacimiento(new Date(year, month - 1, day, 12, 0, 0, 0));
+      } else {
+        setFechaNacimiento(null);
+      }
       setDiagnostico(paciente.id_diagnostico || "");
       setSexo(paciente.sexo || null);
       setEstado(paciente.estado || "Activo");
@@ -144,7 +148,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
     setError(null);
     try {
       const fechaNacStr = fechaNacimiento
-        ? fechaNacimiento.toISOString().split("T")[0]
+        ? formatLocalDate(fechaNacimiento)
         : "";
 
       await onSave(
@@ -268,9 +272,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
                   required
                   leftSection={<IconCalendar size={16} stroke={1.5} />}
                   value={fechaNacimiento}
-                  onChange={(date) =>
-                    setFechaNacimiento(date ? new Date(date) : null)
-                  }
+                  onChange={(date) => setFechaNacimiento(normalizeDateInput(date))}
                   maxDate={new Date()}
                   error={errors.fechaNacimiento}
                   styles={{

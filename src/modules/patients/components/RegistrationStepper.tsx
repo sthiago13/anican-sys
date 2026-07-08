@@ -29,6 +29,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/UI/Button";
 import { type Representante, type Diagnostico } from "../types";
 import { supabase } from "../../../config/supabase";
+import { formatLocalDate, normalizeDateInput } from "../../../utils/date";
 
 import "@mantine/dates/styles.css";
 
@@ -145,7 +146,7 @@ export const RegistrationStepper: React.FC = () => {
       insertedRep = repData as Representante;
 
       const fechaNacStr = fechaNacimiento
-        ? fechaNacimiento.toISOString().split("T")[0]
+        ? formatLocalDate(fechaNacimiento)
         : "";
       const pacienteData = {
         nombres: pacNombres.trim(),
@@ -448,9 +449,7 @@ export const RegistrationStepper: React.FC = () => {
                     required
                     leftSection={<IconCalendar size={16} stroke={1.5} />}
                     value={fechaNacimiento}
-                    onChange={(date) => {
-                      setFechaNacimiento(date ? new Date(date) : null);
-                    }}
+                    onChange={(date) => setFechaNacimiento(normalizeDateInput(date))}
                     maxDate={new Date()}
                     error={errors.fechaNacimiento}
                     styles={{
