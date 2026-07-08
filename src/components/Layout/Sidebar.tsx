@@ -8,6 +8,7 @@ import {
   IconUserPlus,
   IconLogout,
   IconStethoscope,
+  IconShieldLock,
 } from '@tabler/icons-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '../UI/ConfirmModal';
@@ -47,12 +48,15 @@ export const Sidebar: React.FC = () => {
     return parts[0].slice(0, 2).toUpperCase();
   };
 
+  const esAdmin = perfil?.rol === 'Administrador';
+
   const menuItems = [
     { value: '/', label: 'Panel de Control', icon: <IconDashboard size={18} stroke={1.5} /> },
     { value: '/pacientes', label: 'Pacientes', icon: <IconUsers size={18} stroke={1.5} /> },
     { value: '/registro', label: 'Nuevo Registro', icon: <IconUserPlus size={18} stroke={1.5} /> },
     { value: '/diagnosticos', label: 'Diagnósticos', icon: <IconStethoscope size={18} stroke={1.5} /> },
     { value: '/donaciones', label: 'Donaciones', icon: <IconHeartHandshake size={18} stroke={1.5} /> },
+    ...(esAdmin ? [{ value: '/usuarios', label: 'Usuarios', icon: <IconShieldLock size={18} stroke={1.5} /> }] : []),
     { value: '/configuracion', label: 'Configuración', icon: <IconSettings size={18} stroke={1.5} /> },
   ];
 
