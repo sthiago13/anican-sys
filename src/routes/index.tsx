@@ -6,6 +6,7 @@ import { PatientsView } from "../modules/patients/components/PatientsView";
 import { RegistrationStepper } from "../modules/patients/components/RegistrationStepper";
 import { DonationsView } from "../modules/donations/components/DonationsView";
 import { SettingsView } from "../modules/settings/components/SettingsView";
+import { DiagnosticsView } from "../modules/diagnostics/components/DiagnosticsView";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -40,6 +41,10 @@ export const router = createBrowserRouter([
       {
         path: "configuracion",
         element: <SettingsView />,
+      },
+      {
+        path: "diagnosticos",
+        element: <DiagnosticsView />,
       },
       {
         path: "*",

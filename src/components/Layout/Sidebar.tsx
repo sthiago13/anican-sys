@@ -7,6 +7,7 @@ import {
   IconSettings,
   IconUserPlus,
   IconLogout,
+  IconStethoscope,
 } from '@tabler/icons-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '../UI/ConfirmModal';
@@ -50,6 +51,7 @@ export const Sidebar: React.FC = () => {
     { value: '/', label: 'Panel de Control', icon: <IconDashboard size={18} stroke={1.5} /> },
     { value: '/pacientes', label: 'Pacientes', icon: <IconUsers size={18} stroke={1.5} /> },
     { value: '/registro', label: 'Nuevo Registro', icon: <IconUserPlus size={18} stroke={1.5} /> },
+    { value: '/diagnosticos', label: 'Diagnósticos', icon: <IconStethoscope size={18} stroke={1.5} /> },
     { value: '/donaciones', label: 'Donaciones', icon: <IconHeartHandshake size={18} stroke={1.5} /> },
     { value: '/configuracion', label: 'Configuración', icon: <IconSettings size={18} stroke={1.5} /> },
   ];
