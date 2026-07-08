@@ -23,6 +23,8 @@ Sistema de planificación de recursos (ERP) y gestión administrativa interna pa
 3. **Flujo de Mutaciones en DB:** Toda inserción de pacientes requiere la existencia previa de un registro de representante en cumplimiento con el esquema relacional de la base de datos.
 4. **Restricciones de Vocabulario:** Bajo ninguna circunstancia se debe emplear el término "Quirúrgica" en la documentación, interfaces de usuario, comentarios de código o registros médicos dentro del sistema.
 5. **Feature-Driven Architecture:** Todo nuevo módulo de negocio debe ser creado dentro de `src/modules/<nombre-del-modulo>/` con sus respectivos `components` y `hooks`. `App.tsx` debe permanecer únicamente como el proveedor global de contextos (`MantineProvider`, `RouterProvider`).
+6. **Uso Controlado de GitHub CLI y Git:** La interacción con el repositorio remoto a través de `git` y `gh` debe realizarse de forma consciente y controlada, asegurando que la revisión de issues, creación de ramas, commits y pull requests estén explícitamente justificados y vinculados a las tareas prioritarias del proyecto.
+
 
 ## Estado Actual y Próximos Pasos
 - La arquitectura del proyecto ha sido migrada exitosamente a un modelo **Feature-Driven** con enrutamiento declarativo usando `react-router-dom`.
