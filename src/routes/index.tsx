@@ -9,6 +9,7 @@ import { SettingsView } from "../modules/settings/components/SettingsView";
 import { DiagnosticsView } from "../modules/diagnostics/components/DiagnosticsView";
 import { UsersView } from "../modules/users/components/UsersView";
 import { AyudasView } from "../modules/ayudas/components/AyudasView";
+import { RepresentativesView } from "../modules/representatives/components/RepresentativesView";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -31,6 +32,10 @@ export const router = createBrowserRouter([
       {
         path: "pacientes",
         element: <PatientsView />,
+      },
+      {
+        path: "representantes",
+        element: <RepresentativesView />,
       },
       {
         path: "registro",

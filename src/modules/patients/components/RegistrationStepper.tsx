@@ -13,6 +13,7 @@ import {
   Box,
   Divider,
   Grid,
+  Checkbox,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import {
@@ -30,6 +31,7 @@ import { Button } from "../../../components/UI/Button";
 import { type Representante, type Diagnostico } from "../types";
 import { supabase } from "../../../config/supabase";
 import { formatLocalDate, normalizeDateInput } from "../../../utils/date";
+import { RepresentativeModal } from "../../representatives/components/RepresentativeModal";
 
 import "@mantine/dates/styles.css";
 
@@ -41,8 +43,9 @@ export const RegistrationStepper: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Catálogo de diagnósticos
+  // Catálogo de diagnósticos y representantes
   const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
+  const [representantesList, setRepresentantesList] = useState<Representante[]>([]);
 
   useEffect(() => {
     const fetchDiagnosticos = async () => {
@@ -54,7 +57,17 @@ export const RegistrationStepper: React.FC = () => {
         setDiagnosticos(data as Diagnostico[]);
       }
     };
+    const fetchRepresentantes = async () => {
+      const { data, error } = await supabase
+        .from("representantes")
+        .select("*")
+        .order("nombres", { ascending: true });
+      if (!error && data) {
+        setRepresentantesList(data as Representante[]);
+      }
+    };
     void fetchDiagnosticos();
+    void fetchRepresentantes();
   }, []);
 
   // Paso 1: Representante
@@ -63,6 +76,11 @@ export const RegistrationStepper: React.FC = () => {
   const [telefono1, setTelefono1] = useState("");
   const [telefono2, setTelefono2] = useState("");
   const [residencia, setResidencia] = useState("");
+
+  // Estado para asociar representante existente
+  const [isExistingRepresentative, setIsExistingRepresentative] = useState(false);
+  const [selectedRepId, setSelectedRepId] = useState<string | null>(null);
+  const [editModalOpened, setEditModalOpened] = useState(false);
 
   // Paso 2: Paciente
   const [pacNombres, setPacNombres] = useState("");
@@ -77,8 +95,14 @@ export const RegistrationStepper: React.FC = () => {
 
   const validateStep1 = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!cedula.trim()) newErrors.cedula = "La cédula es obligatoria";
-    if (!repNombres.trim()) newErrors.repNombres = "El nombre es obligatorio";
+    if (isExistingRepresentative) {
+      if (!selectedRepId) {
+        newErrors.selectedRepId = "Debe seleccionar un representante registrado";
+      }
+    } else {
+      if (!cedula.trim()) newErrors.cedula = "La cédula es obligatoria";
+      if (!repNombres.trim()) newErrors.repNombres = "El nombre es obligatorio";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -114,37 +138,47 @@ export const RegistrationStepper: React.FC = () => {
     setSubmitError(null);
     setLoading(true);
 
-    const representanteData = {
-      cedula: cedula.trim(),
-      nombres: repNombres.trim(),
-      telefono_1: telefono1.trim() || null,
-      telefono_2: telefono2.trim() || null,
-      residencia: residencia.trim() || null,
-    };
-
+    let finalRepId = selectedRepId;
     let insertedRep: Representante | null = null;
 
     try {
-      const { data: repData, error: repError } = await supabase
-        .from("representantes")
-        .insert([representanteData])
-        .select()
-        .single();
+      // 1. Si no es un representante existente, lo creamos
+      if (!isExistingRepresentative) {
+        const representanteData = {
+          cedula: cedula.trim(),
+          nombres: repNombres.trim(),
+          telefono_1: telefono1.trim() || null,
+          telefono_2: telefono2.trim() || null,
+          residencia: residencia.trim() || null,
+        };
 
-      if (repError) {
-        throw new Error(
-          `Error al registrar el representante: ${repError.message}`,
-        );
+        const { data: repData, error: repError } = await supabase
+          .from("representantes")
+          .insert([representanteData])
+          .select()
+          .single();
+
+        if (repError) {
+          throw new Error(
+            `Error al registrar el representante: ${repError.message}`,
+          );
+        }
+
+        if (!repData) {
+          throw new Error(
+            "No se recibió la confirmación del representante registrado.",
+          );
+        }
+
+        insertedRep = repData as Representante;
+        finalRepId = insertedRep.id;
       }
 
-      if (!repData) {
-        throw new Error(
-          "No se recibió la confirmación del representante registrado.",
-        );
+      if (!finalRepId) {
+        throw new Error("No se ha definido un representante válido para el paciente.");
       }
 
-      insertedRep = repData as Representante;
-
+      // 2. Registramos el paciente vinculándolo al representante
       const fechaNacStr = fechaNacimiento
         ? formatLocalDate(fechaNacimiento)
         : "";
@@ -155,7 +189,7 @@ export const RegistrationStepper: React.FC = () => {
         id_diagnostico: diagnostico || null,
         sexo: sexo || null,
         estado: estado || "Activo",
-        id_representante: insertedRep.id,
+        id_representante: finalRepId,
       };
 
       const { data: pacData, error: pacError } = await supabase
@@ -181,7 +215,8 @@ export const RegistrationStepper: React.FC = () => {
     } catch (err: unknown) {
       console.error("Error en el proceso de registro:", err);
 
-      if (insertedRep && insertedRep.id) {
+      // Si creamos un representante en este intento, lo limpiamos para no dejar huérfanos
+      if (!isExistingRepresentative && insertedRep && insertedRep.id) {
         try {
           await supabase
             .from("representantes")
@@ -294,16 +329,60 @@ export const RegistrationStepper: React.FC = () => {
                 Estos datos son requeridos para el registro.
               </Alert>
 
-              <Grid>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <TextInput
-                    label="Cédula de Identidad"
-                    placeholder="V-12345678"
-                    required
-                    leftSection={<IconId size={16} stroke={1.5} />}
-                    value={cedula}
-                    onChange={(e) => setCedula(e.target.value)}
-                    error={errors.cedula}
+              <Checkbox
+                label="¿El representante ya está registrado en el sistema?"
+                checked={isExistingRepresentative}
+                onChange={(e) => {
+                  const checked = e.currentTarget.checked;
+                  setIsExistingRepresentative(checked);
+                  setSelectedRepId(null);
+                  setCedula("");
+                  setRepNombres("");
+                  setTelefono1("");
+                  setTelefono2("");
+                  setResidencia("");
+                  setErrors({});
+                }}
+                styles={{
+                  label: {
+                    fontWeight: 600,
+                    color: "var(--anican-azul-oscuro)",
+                  },
+                }}
+              />
+
+              {isExistingRepresentative && (
+                <Stack gap="xs">
+                  <Select
+                    label="Buscar Representante Registrado"
+                    placeholder="Escribe la cédula o el nombre del representante"
+                    data={representantesList.map((r) => ({
+                      value: r.id,
+                      label: `${r.cedula} - ${r.nombres}`,
+                    }))}
+                    value={selectedRepId}
+                    onChange={(val) => {
+                      setSelectedRepId(val);
+                      const rep = representantesList.find((r) => r.id === val);
+                      if (rep) {
+                        setCedula(rep.cedula || "");
+                        setRepNombres(rep.nombres || "");
+                        setTelefono1(rep.telefono_1 || "");
+                        setTelefono2(rep.telefono_2 || "");
+                        setResidencia(rep.residencia || "");
+                      } else {
+                        setCedula("");
+                        setRepNombres("");
+                        setTelefono1("");
+                        setTelefono2("");
+                        setResidencia("");
+                      }
+                      setErrors({});
+                    }}
+                    searchable
+                    clearable
+                    error={errors.selectedRepId}
+                    nothingFoundMessage="No se encontraron representantes con ese criterio"
                     styles={{
                       label: {
                         fontWeight: 600,
@@ -313,79 +392,126 @@ export const RegistrationStepper: React.FC = () => {
                       input: { borderRadius: 8 },
                     }}
                   />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <TextInput
-                    label="Nombres Completos"
-                    placeholder="María García"
-                    required
-                    leftSection={<IconUser size={16} stroke={1.5} />}
-                    value={repNombres}
-                    onChange={(e) => setRepNombres(e.target.value)}
-                    error={errors.repNombres}
-                    styles={{
-                      label: {
-                        fontWeight: 600,
-                        marginBottom: 4,
-                        color: "var(--anican-azul-oscuro)",
-                      },
-                      input: { borderRadius: 8 },
-                    }}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <TextInput
-                    label="Teléfono Principal"
-                    placeholder="+58 412-1234567"
-                    leftSection={<IconPhone size={16} stroke={1.5} />}
-                    value={telefono1}
-                    onChange={(e) => setTelefono1(e.target.value)}
-                    styles={{
-                      label: {
-                        fontWeight: 600,
-                        marginBottom: 4,
-                        color: "var(--anican-azul-oscuro)",
-                      },
-                      input: { borderRadius: 8 },
-                    }}
-                  />
-                </Grid.Col>
-                <Grid.Col span={{ base: 12, md: 6 }}>
-                  <TextInput
-                    label="Teléfono Secundario"
-                    placeholder="+58 424-7654321"
-                    leftSection={<IconPhone size={16} stroke={1.5} />}
-                    value={telefono2}
-                    onChange={(e) => setTelefono2(e.target.value)}
-                    styles={{
-                      label: {
-                        fontWeight: 600,
-                        marginBottom: 4,
-                        color: "var(--anican-azul-oscuro)",
-                      },
-                      input: { borderRadius: 8 },
-                    }}
-                  />
-                </Grid.Col>
-                <Grid.Col span={12}>
-                  <Textarea
-                    label="Residencia"
-                    placeholder="Dirección completa del representante"
-                    leftSection={<IconHome size={16} stroke={1.5} />}
-                    value={residencia}
-                    onChange={(e) => setResidencia(e.target.value)}
-                    minRows={2}
-                    styles={{
-                      label: {
-                        fontWeight: 600,
-                        marginBottom: 4,
-                        color: "var(--anican-azul-oscuro)",
-                      },
-                      input: { borderRadius: 8 },
-                    }}
-                  />
-                </Grid.Col>
-              </Grid>
+                  {selectedRepId && (
+                    <Group justify="flex-end">
+                      <Button
+                        variant="subtle"
+                        size="xs"
+                        color="orange"
+                        onClick={() => setEditModalOpened(true)}
+                        styles={{
+                          root: {
+                            height: 28,
+                            padding: "0 8px",
+                          },
+                        }}
+                      >
+                        Editar datos de este representante
+                      </Button>
+                    </Group>
+                  )}
+                </Stack>
+              )}
+
+              {(!isExistingRepresentative || selectedRepId) && (
+                <Grid>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <TextInput
+                      label="Cédula de Identidad"
+                      placeholder="V-12345678"
+                      required
+                      leftSection={<IconId size={16} stroke={1.5} />}
+                      value={cedula}
+                      onChange={(e) => setCedula(e.target.value)}
+                      error={errors.cedula}
+                      disabled={isExistingRepresentative}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          marginBottom: 4,
+                          color: "var(--anican-azul-oscuro)",
+                        },
+                        input: { borderRadius: 8 },
+                      }}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <TextInput
+                      label="Nombres Completos"
+                      placeholder="María García"
+                      required
+                      leftSection={<IconUser size={16} stroke={1.5} />}
+                      value={repNombres}
+                      onChange={(e) => setRepNombres(e.target.value)}
+                      error={errors.repNombres}
+                      disabled={isExistingRepresentative}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          marginBottom: 4,
+                          color: "var(--anican-azul-oscuro)",
+                        },
+                        input: { borderRadius: 8 },
+                      }}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <TextInput
+                      label="Teléfono Principal"
+                      placeholder="+58 412-1234567"
+                      leftSection={<IconPhone size={16} stroke={1.5} />}
+                      value={telefono1}
+                      onChange={(e) => setTelefono1(e.target.value)}
+                      disabled={isExistingRepresentative}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          marginBottom: 4,
+                          color: "var(--anican-azul-oscuro)",
+                        },
+                        input: { borderRadius: 8 },
+                      }}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={{ base: 12, md: 6 }}>
+                    <TextInput
+                      label="Teléfono Secundario"
+                      placeholder="+58 424-7654321"
+                      leftSection={<IconPhone size={16} stroke={1.5} />}
+                      value={telefono2}
+                      onChange={(e) => setTelefono2(e.target.value)}
+                      disabled={isExistingRepresentative}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          marginBottom: 4,
+                          color: "var(--anican-azul-oscuro)",
+                        },
+                        input: { borderRadius: 8 },
+                      }}
+                    />
+                  </Grid.Col>
+                  <Grid.Col span={12}>
+                    <Textarea
+                      label="Residencia"
+                      placeholder="Dirección completa del representante"
+                      leftSection={<IconHome size={16} stroke={1.5} />}
+                      value={residencia}
+                      onChange={(e) => setResidencia(e.target.value)}
+                      minRows={2}
+                      disabled={isExistingRepresentative}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          marginBottom: 4,
+                          color: "var(--anican-azul-oscuro)",
+                        },
+                        input: { borderRadius: 8 },
+                      }}
+                    />
+                  </Grid.Col>
+                </Grid>
+              )}
             </Stack>
           </Stepper.Step>
 
@@ -728,6 +854,44 @@ export const RegistrationStepper: React.FC = () => {
           )}
         </Group>
       </Card>
+
+      <RepresentativeModal
+        opened={editModalOpened}
+        onClose={() => setEditModalOpened(false)}
+        onSave={async (repData) => {
+          if (!selectedRepId) return;
+          const { error } = await supabase
+            .from("representantes")
+            .update({
+              cedula: repData.cedula,
+              nombres: repData.nombres,
+              telefono_1: repData.telefono_1 || null,
+              telefono_2: repData.telefono_2 || null,
+              residencia: repData.residencia || null,
+            })
+            .eq("id", selectedRepId);
+          if (error) throw error;
+
+          // Actualizar el estado local representantesList
+          setRepresentantesList((prev) =>
+            prev.map((r) =>
+              r.id === selectedRepId
+                ? { ...r, ...repData }
+                : r
+            )
+          );
+
+          // Actualizar los campos visuales en el stepper
+          setCedula(repData.cedula);
+          setRepNombres(repData.nombres);
+          setTelefono1(repData.telefono_1 || "");
+          setTelefono2(repData.telefono_2 || "");
+          setResidencia(repData.residencia || "");
+        }}
+        representante={
+          representantesList.find((r) => r.id === selectedRepId) || null
+        }
+      />
     </Stack>
   );
 };
