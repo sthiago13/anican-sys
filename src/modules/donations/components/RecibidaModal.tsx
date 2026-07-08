@@ -5,6 +5,7 @@ import { IconAlertCircle } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { supabase } from "../../../config/supabase";
 import { normalizeDateInput, formatLocalDate } from "../../../utils/date";
+import { COP_FALLBACK, useRates, VES_FALLBACK } from "../hooks/useRates";
 
 interface RecibidaModalProps {
   opened: boolean;
@@ -33,6 +34,7 @@ export function RecibidaModal({
   onClose,
   onSave,
 }: RecibidaModalProps) {
+  const { rates, fetchTodayRates } = useRates();
   const [fecha, setFecha] = useState<Date | null>(new Date());
   const [entidadDonante, setEntidadDonante] = useState("");
   const [montoOCantidad, setMontoOCantidad] = useState("");
@@ -77,21 +79,20 @@ export function RecibidaModal({
       };
 
       void loadRelations();
+      void fetchTodayRates();
     }
   }, [opened]);
 
-  // Sincronizar tasa de cambio según la moneda elegida
   useEffect(() => {
     if (moneda === "USD") {
       setTasaCambio(1);
     } else if (moneda === "VES") {
-      setTasaCambio(40); // Tasa estimada inicial editable
+      setTasaCambio(rates?.tasa_ves || VES_FALLBACK);
     } else if (moneda === "COP") {
-      setTasaCambio(4000); // Tasa estimada inicial editable
+      setTasaCambio(rates?.tasa_cop || COP_FALLBACK);
     }
-  }, [moneda]);
+  }, [moneda, rates]);
 
-  // Auto-gestión del switch de valoración según la categoría de la ayuda seleccionada
   useEffect(() => {
     if (idAyuda) {
       const selected = catalogoAyudas.find((a) => a.id === idAyuda);
@@ -250,7 +251,7 @@ export function RecibidaModal({
             searchable
             data={ayudaOptions}
             value={idAyuda}
-            onChange={setIdAyuda}
+            onChange={(value) => setIdAyuda(value)}
             styles={{
               label: {
                 fontWeight: 600,
@@ -301,7 +302,7 @@ export function RecibidaModal({
                   min={0.01}
                   decimalScale={2}
                   value={montoOriginal}
-                  onChange={setMontoOriginal}
+                  onChange={(value) => setMontoOriginal(value)}
                   styles={{
                     label: {
                       fontWeight: 600,
@@ -321,7 +322,7 @@ export function RecibidaModal({
                     { value: "COP", label: "Pesos (COP)" },
                   ]}
                   value={moneda}
-                  onChange={setMoneda}
+                  onChange={(value) => setMoneda(value)}
                   styles={{
                     label: {
                       fontWeight: 600,
@@ -334,28 +335,28 @@ export function RecibidaModal({
               </Group>
 
               {moneda !== "USD" ? (
-                <NumberInput
-                  label={`Tasa de Cambio (1 USD = ? ${moneda})`}
-                  placeholder="Ej. 40.5"
-                  required
-                  min={0.0001}
-                  decimalScale={4}
-                  value={tasaCambio}
-                  onChange={setTasaCambio}
+                <TextInput
+                  label="Tasa de Cambio Aplicada"
+                  value={`1 USD = ${Number(tasaCambio).toFixed(4)} ${moneda}`}
+                  readOnly
                   styles={{
                     label: {
                       fontWeight: 600,
                       color: "var(--anican-azul-oscuro)",
                       marginBottom: 4,
                     },
-                    input: { borderRadius: 8 },
+                    input: {
+                      borderRadius: 8,
+                      backgroundColor: "var(--anican-bg)",
+                      fontWeight: 600,
+                    },
                   }}
                 />
               ) : (
                 <TextInput
                   label="Valor Contable (USD)"
                   value={`$ ${numOrig.toFixed(2)} USD`}
-                  disabled
+                  readOnly
                   styles={{
                     label: {
                       fontWeight: 600,

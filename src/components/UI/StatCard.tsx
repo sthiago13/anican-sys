@@ -32,6 +32,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         position: 'relative',
         overflow: 'hidden',
         cursor: 'default',
+        height: "100%"
       }}
     >
       <Group justify="space-between" align="flex-start">

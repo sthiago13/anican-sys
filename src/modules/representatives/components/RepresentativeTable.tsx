@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Table, Group, Text, Tooltip, Badge, Pill } from "@mantine/core";
+import { Table, Group, Text, Tooltip, Badge } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { IconButton } from "../../../components/UI/IconButton";
 import { ConfirmModal } from "../../../components/UI/ConfirmModal";
