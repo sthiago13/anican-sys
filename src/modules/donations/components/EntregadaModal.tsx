@@ -27,7 +27,6 @@ interface EntregadaModalProps {
     idPaciente: string | null,
     beneficiarioExterno: string | null,
     idAyuda: string,
-    metodoEntrega: string,
     cantidad: number,
     montoEquivalente: number,
     conSoporte: boolean,
@@ -60,7 +59,6 @@ export function EntregadaModal({
   const [idPaciente, setIdPaciente] = useState<string | null>(null);
   const [beneficiarioExterno, setBeneficiarioExterno] = useState("");
   const [idAyuda, setIdAyuda] = useState<string | null>(null);
-  const [metodoEntrega, setMetodoEntrega] = useState<string | null>("Entrega Física");
   const [cantidad, setCantidad] = useState<number | string>(1);
   const [conSoporte, setConSoporte] = useState(false);
   const [observaciones, setObservaciones] = useState("");
@@ -68,7 +66,7 @@ export function EntregadaModal({
   const [loading, setLoading] = useState(false);
 
   // Multimoneda y Valoración
-  const [esMonetario, setEsMonetario] = useState(true); // Por defecto activo para incentivar el registro del costo
+  const [esMonetario, setEsMonetario] = useState(true);
   const [moneda, setMoneda] = useState<string | null>("USD");
   const [montoOriginal, setMontoOriginal] = useState<number | string>(0);
   const [tasaCambio, setTasaCambio] = useState<number | string>(1);
@@ -84,7 +82,6 @@ export function EntregadaModal({
       setIdPaciente(null);
       setBeneficiarioExterno("");
       setIdAyuda(null);
-      setMetodoEntrega("Entrega Física");
       setCantidad(1);
       setMontoOriginal(0);
       setTasaCambio(1);
@@ -132,6 +129,20 @@ export function EntregadaModal({
     }
   }, [moneda]);
 
+  // Auto-gestión del switch de valoración según la categoría de la ayuda seleccionada
+  useEffect(() => {
+    if (idAyuda) {
+      const selected = catalogoAyudas.find((a) => a.id === idAyuda);
+      if (selected) {
+        if (selected.categoria === "Económico") {
+          setEsMonetario(true);
+        } else {
+          setEsMonetario(false);
+        }
+      }
+    }
+  }, [idAyuda, catalogoAyudas]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!fecha) {
@@ -148,10 +159,6 @@ export function EntregadaModal({
     }
     if (!idAyuda) {
       setError("Debes seleccionar un artículo del catálogo de ayudas");
-      return;
-    }
-    if (!metodoEntrega) {
-      setError("El método de entrega es requerido");
       return;
     }
 
@@ -199,7 +206,6 @@ export function EntregadaModal({
         destinatarioTipo === "paciente" ? idPaciente : null,
         destinatarioTipo === "externo" ? beneficiarioExterno : null,
         idAyuda,
-        metodoEntrega,
         cantNum,
         finalMontoEquivalente, // Guardamos el equivalente contable en USD
         conSoporte,
@@ -338,28 +344,6 @@ export function EntregadaModal({
             data={ayudaOptions}
             value={idAyuda}
             onChange={setIdAyuda}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <Select
-            label="Método de Entrega"
-            placeholder="Seleccionar método"
-            required
-            data={[
-              { value: "Entrega Física", label: "Entrega Física en Sede" },
-              { value: "Transferencia Directa", label: "Transferencia Directa de Fondos" },
-              { value: "Pago a Proveedor", label: "Pago Directo a Farmacia / Proveedor de Servicio" },
-              { value: "Otros", label: "Otros" },
-            ]}
-            value={metodoEntrega}
-            onChange={setMetodoEntrega}
             styles={{
               label: {
                 fontWeight: 600,

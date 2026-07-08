@@ -12,14 +12,13 @@ interface RecibidaModalProps {
   onSave: (
     fecha: string,
     entidadDonante: string,
-    metodoIngreso: string,
     montoOCantidad: string,
     observaciones: string,
     moneda: string,
     montoOriginal: number | null,
     tasaCambio: number | null,
     montoEquivalenteUsd: number | null,
-    idAyuda: string | null
+    idAyuda: string
   ) => Promise<void>;
 }
 
@@ -36,7 +35,6 @@ export function RecibidaModal({
 }: RecibidaModalProps) {
   const [fecha, setFecha] = useState<Date | null>(new Date());
   const [entidadDonante, setEntidadDonante] = useState("");
-  const [metodoIngreso, setMetodoIngreso] = useState<string | null>("Transferencia");
   const [montoOCantidad, setMontoOCantidad] = useState("");
   const [observaciones, setObservaciones] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +54,6 @@ export function RecibidaModal({
     if (opened) {
       setFecha(new Date());
       setEntidadDonante("");
-      setMetodoIngreso("Transferencia");
       setMontoOCantidad("");
       setObservaciones("");
       setEsMonetario(true);
@@ -94,14 +91,19 @@ export function RecibidaModal({
     }
   }, [moneda]);
 
-  // Si cambia el método de ingreso a "En Especie", sugerimos desactivar o adecuar la valoración
+  // Auto-gestión del switch de valoración según la categoría de la ayuda seleccionada
   useEffect(() => {
-    if (metodoIngreso === "En Especie") {
-      setEsMonetario(false);
-    } else {
-      setEsMonetario(true);
+    if (idAyuda) {
+      const selected = catalogoAyudas.find((a) => a.id === idAyuda);
+      if (selected) {
+        if (selected.categoria === "Económico") {
+          setEsMonetario(true);
+        } else {
+          setEsMonetario(false);
+        }
+      }
     }
-  }, [metodoIngreso]);
+  }, [idAyuda, catalogoAyudas]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,8 +115,8 @@ export function RecibidaModal({
       setError("La entidad donante es requerida");
       return;
     }
-    if (!metodoIngreso) {
-      setError("El método de ingreso es requerido");
+    if (!idAyuda) {
+      setError("Debes clasificar la donación con un artículo del catálogo");
       return;
     }
     if (!montoOCantidad.trim()) {
@@ -158,7 +160,6 @@ export function RecibidaModal({
       await onSave(
         fechaString,
         entidadDonante,
-        metodoIngreso,
         montoOCantidad.trim(),
         observaciones,
         esMonetario ? (moneda || "USD") : "USD",
@@ -243,33 +244,10 @@ export function RecibidaModal({
           />
 
           <Select
-            label="Método de Ingreso"
-            placeholder="Seleccionar método"
+            label="Artículo / Donativo del Catálogo"
+            placeholder="Seleccionar artículo para clasificar el donativo"
             required
-            data={[
-              { value: "Transferencia", label: "Transferencia Bancaria" },
-              { value: "Efectivo", label: "Efectivo" },
-              { value: "Pago Móvil", label: "Pago Móvil" },
-              { value: "En Especie", label: "En Especie (Medicamentos, Insumos, etc.)" },
-              { value: "Otros", label: "Otros" },
-            ]}
-            value={metodoIngreso}
-            onChange={setMetodoIngreso}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <Select
-            label="Categoría / Artículo del Catálogo (Opcional)"
-            placeholder="Asociar a un artículo del catálogo"
             searchable
-            clearable
             data={ayudaOptions}
             value={idAyuda}
             onChange={setIdAyuda}

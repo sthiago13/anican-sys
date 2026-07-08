@@ -172,7 +172,6 @@ export function DonationsView() {
                   <Table.Tr>
                     <Table.Th>Donante / Benefactor</Table.Th>
                     <Table.Th>Fecha</Table.Th>
-                    <Table.Th>Método</Table.Th>
                     <Table.Th>Monto o Detalle</Table.Th>
                     <Table.Th>Observaciones</Table.Th>
                   </Table.Tr>
@@ -180,7 +179,7 @@ export function DonationsView() {
                 <Table.Tbody>
                   {filteredRecibidas.length === 0 ? (
                     <Table.Tr>
-                      <Table.Td colSpan={5}>
+                      <Table.Td colSpan={4}>
                         <Text ta="center" py="xl" c="dimmed">
                           No se encontraron donaciones recibidas que coincidan con la búsqueda.
                         </Text>
@@ -197,11 +196,7 @@ export function DonationsView() {
                         <Table.Td>
                           <Text size="sm">{formatDate(r.fecha)}</Text>
                         </Table.Td>
-                        <Table.Td>
-                          <Badge color="blue" variant="light">
-                            {r.metodo_ingreso}
-                          </Badge>
-                        </Table.Td>
+
                         <Table.Td>
                           {r.catalogo_ayudas && (
                             <Badge color="gray" variant="light" size="xs" mb={4} style={{ display: "block", width: "fit-content" }}>

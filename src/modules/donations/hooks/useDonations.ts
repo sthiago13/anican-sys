@@ -58,14 +58,13 @@ export function useDonations() {
   const handleSaveRecibida = async (
     fecha: string,
     entidadDonante: string,
-    metodoIngreso: string,
     montoOCantidad: string,
     observaciones: string,
     moneda: string,
     montoOriginal: number | null,
     tasaCambio: number | null,
     montoEquivalenteUsd: number | null,
-    idAyuda: string | null
+    idAyuda: string
   ) => {
     setLoading(true);
     try {
@@ -73,7 +72,6 @@ export function useDonations() {
         {
           fecha,
           entidad_donante: entidadDonante.trim(),
-          metodo_ingreso: metodoIngreso,
           monto_o_cantidad: montoOCantidad.trim(),
           observaciones: observaciones.trim() || null,
           registrado_por: user?.id || null, // Auditoría del usuario logueado (#24)
@@ -100,7 +98,6 @@ export function useDonations() {
     idPaciente: string | null,
     beneficiarioExterno: string | null,
     idAyuda: string,
-    metodoEntrega: string,
     cantidad: number,
     montoEquivalente: number,
     conSoporte: boolean,
@@ -117,7 +114,6 @@ export function useDonations() {
           id_paciente: idPaciente || null,
           beneficiario_externo: beneficiarioExterno?.trim() || null,
           id_ayuda: idAyuda,
-          metodo_entrega: metodoEntrega,
           cantidad,
           monto_equivalente: montoEquivalente,
           con_soporte: conSoporte,
