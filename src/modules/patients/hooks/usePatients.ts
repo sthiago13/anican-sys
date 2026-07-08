@@ -1,23 +1,25 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../../config/supabase";
-import { type Paciente, type Representante } from "../types";
+import { type Paciente, type Representante, type Diagnostico } from "../types";
 
 interface DbPaciente {
   id: string;
   id_representante: string | null;
+  id_diagnostico: string | null;
   nombres: string;
   apellidos: string;
   fecha_nacimiento: string;
-  diagnostico: string | null;
   sexo: string | null;
   estado: Paciente["estado"];
   created_at?: string;
   representantes: { nombres: string } | { nombres: string }[] | null;
+  diagnosticos: { nombre: string } | { nombre: string }[] | null;
 }
 
 export function usePatients() {
   const [pacientes, setPacientes] = useState<Paciente[]>([]);
   const [representantes, setRepresentantes] = useState<Representante[]>([]);
+  const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchData = async () => {
@@ -28,15 +30,18 @@ export function usePatients() {
       ).select(`
           id,
           id_representante,
+          id_diagnostico,
           nombres,
           apellidos,
           fecha_nacimiento,
-          diagnostico,
           sexo,
           estado,
           created_at,
           representantes (
             nombres
+          ),
+          diagnosticos (
+            nombre
           )
         `);
 
@@ -48,6 +53,13 @@ export function usePatients() {
 
       if (repError) throw repError;
 
+      const { data: diagData, error: diagError } = await supabase
+        .from("diagnosticos")
+        .select("*")
+        .order("nombre", { ascending: true });
+
+      if (diagError) throw diagError;
+
       const mappedPacientes: Paciente[] = (
         (pacData as unknown as DbPaciente[]) || []
       ).map((pac) => {
@@ -55,22 +67,28 @@ export function usePatients() {
           ? pac.representantes[0]
           : pac.representantes;
 
+        const diag = Array.isArray(pac.diagnosticos)
+          ? pac.diagnosticos[0]
+          : pac.diagnosticos;
+
         return {
           id: pac.id,
           id_representante: pac.id_representante || undefined,
+          id_diagnostico: pac.id_diagnostico || undefined,
           nombres: pac.nombres,
           apellidos: pac.apellidos,
           fecha_nacimiento: pac.fecha_nacimiento,
-          diagnostico: pac.diagnostico || undefined,
           sexo: pac.sexo || undefined,
           estado: pac.estado,
           created_at: pac.created_at,
           representante_nombre: rep ? rep.nombres : "—",
+          diagnostico_nombre: diag ? diag.nombre : "—",
         };
       });
 
       setPacientes(mappedPacientes);
       setRepresentantes(repData || []);
+      setDiagnosticos(diagData || []);
     } catch (err: unknown) {
       console.error("Error al cargar datos desde Supabase:", err);
     } finally {
@@ -113,7 +131,7 @@ export function usePatients() {
       nombres: string;
       apellidos: string;
       fecha_nacimiento: string;
-      diagnostico?: string;
+      id_diagnostico?: string;
       sexo?: string;
       estado: Paciente["estado"];
     },
@@ -149,7 +167,7 @@ export function usePatients() {
           nombres: pacienteData.nombres.trim(),
           apellidos: pacienteData.apellidos.trim(),
           fecha_nacimiento: pacienteData.fecha_nacimiento,
-          diagnostico: pacienteData.diagnostico?.trim() || null,
+          id_diagnostico: pacienteData.id_diagnostico || null,
           sexo: pacienteData.sexo || null,
           estado: pacienteData.estado,
         })
@@ -170,11 +188,13 @@ export function usePatients() {
   return {
     pacientes,
     representantes,
+    diagnosticos,
     loading,
     handleUpdateStatus,
     handleUpdatePaciente,
     setPacientes,
     setRepresentantes,
+    setDiagnosticos,
   };
 }
 

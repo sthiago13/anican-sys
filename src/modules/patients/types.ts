@@ -1,16 +1,25 @@
+// Interface alineada a la tabla `diagnosticos` de Supabase
+export interface Diagnostico {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  created_at?: string;
+}
+
 // Interface alineada a la tabla `pacientes` de Supabase
 export interface Paciente {
   id: string;
   id_representante?: string;
+  id_diagnostico?: string;
   nombres: string;
   apellidos: string;
   fecha_nacimiento: string;
-  diagnostico?: string;
   sexo?: string;
   estado: "Activo" | "Fallecido" | "Inactivo";
   created_at?: string;
-  // Joined data from representante (optional, for display)
+  // Joined data (optional, for display)
   representante_nombre: string;
+  diagnostico_nombre?: string;
 }
 
 // Interface alineada a la tabla `representantes` de Supabase

@@ -21,7 +21,7 @@ import {
   IconAlertCircle,
 } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
-import type { Paciente, Representante } from "../types";
+import type { Paciente, Representante, Diagnostico } from "../types";
 
 import "@mantine/dates/styles.css";
 
@@ -30,13 +30,14 @@ interface EditPatientModalProps {
   onClose: () => void;
   paciente: Paciente | null;
   representante: Representante | null;
+  diagnosticos: Diagnostico[];
   onSave: (
     pacienteId: string,
     pacienteData: {
       nombres: string;
       apellidos: string;
       fecha_nacimiento: string;
-      diagnostico?: string;
+      id_diagnostico?: string;
       sexo?: string;
       estado: Paciente["estado"];
     },
@@ -56,6 +57,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
   onClose,
   paciente,
   representante,
+  diagnosticos,
   onSave,
 }) => {
   const [activeTab, setActiveTab] = useState<string | null>("paciente");
@@ -87,7 +89,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
       setFechaNacimiento(
         paciente.fecha_nacimiento ? new Date(paciente.fecha_nacimiento) : null,
       );
-      setDiagnostico(paciente.diagnostico || "");
+      setDiagnostico(paciente.id_diagnostico || "");
       setSexo(paciente.sexo || null);
       setEstado(paciente.estado || "Activo");
     }
@@ -151,7 +153,7 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
           nombres: pacNombres,
           apellidos: pacApellidos,
           fecha_nacimiento: fechaNacStr,
-          diagnostico,
+          id_diagnostico: diagnostico || undefined,
           sexo: sexo || undefined,
           estado,
         },
@@ -282,11 +284,14 @@ export const EditPatientModal: React.FC<EditPatientModalProps> = ({
                 />
               </Grid.Col>
               <Grid.Col span={{ base: 12, md: 6 }}>
-                <TextInput
+                <Select
                   label="Diagnóstico"
-                  placeholder="Ej. Leucemia"
+                  placeholder="Seleccionar diagnóstico"
                   value={diagnostico}
-                  onChange={(e) => setDiagnostico(e.target.value)}
+                  onChange={(val) => setDiagnostico(val || "")}
+                  data={diagnosticos.map((d) => ({ value: d.id, label: d.nombre }))}
+                  searchable
+                  clearable
                   styles={{
                     label: {
                       fontWeight: 600,

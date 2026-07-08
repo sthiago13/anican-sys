@@ -8,7 +8,7 @@ import { usePatients } from "../../patients/hooks/usePatients";
 
 export function DashboardView() {
   const navigate = useNavigate();
-  const { pacientes, representantes, loading, handleUpdateStatus, handleUpdatePaciente } = usePatients();
+  const { pacientes, representantes, diagnosticos, loading, handleUpdateStatus, handleUpdatePaciente } = usePatients();
 
   const totalPacientes = pacientes.length;
   const enTratamiento = pacientes.filter((p) => p.estado === "Activo").length;
@@ -103,6 +103,7 @@ export function DashboardView() {
         <PacienteTable
           pacientes={pacientes.slice(0, 3)}
           representantes={representantes}
+          diagnosticos={diagnosticos}
           searchQuery=""
           filterStatus="Todos"
           onUpdateStatus={handleUpdateStatus}

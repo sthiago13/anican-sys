@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Stepper,
   TextInput,
@@ -27,7 +27,7 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/UI/Button";
-import { type Representante } from "../types";
+import { type Representante, type Diagnostico } from "../types";
 import { supabase } from "../../../config/supabase";
 
 import "@mantine/dates/styles.css";
@@ -39,6 +39,22 @@ export const RegistrationStepper: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Catálogo de diagnósticos
+  const [diagnosticos, setDiagnosticos] = useState<Diagnostico[]>([]);
+
+  useEffect(() => {
+    const fetchDiagnosticos = async () => {
+      const { data, error } = await supabase
+        .from("diagnosticos")
+        .select("*")
+        .order("nombre", { ascending: true });
+      if (!error && data) {
+        setDiagnosticos(data as Diagnostico[]);
+      }
+    };
+    void fetchDiagnosticos();
+  }, []);
 
   // Paso 1: Representante
   const [cedula, setCedula] = useState("");
@@ -135,7 +151,7 @@ export const RegistrationStepper: React.FC = () => {
         nombres: pacNombres.trim(),
         apellidos: pacApellidos.trim(),
         fecha_nacimiento: fechaNacStr,
-        diagnostico: diagnostico.trim() || null,
+        id_diagnostico: diagnostico || null,
         sexo: sexo || null,
         estado: estado || "Activo",
         id_representante: insertedRep.id,
@@ -448,11 +464,14 @@ export const RegistrationStepper: React.FC = () => {
                   />
                 </Grid.Col>
                 <Grid.Col span={{ base: 12, md: 6 }}>
-                  <TextInput
+                  <Select
                     label="Diagnóstico"
-                    placeholder="Ej. Leucemia Linfoblástica Aguda"
+                    placeholder="Seleccionar diagnóstico"
                     value={diagnostico}
-                    onChange={(e) => setDiagnostico(e.target.value)}
+                    onChange={(val) => setDiagnostico(val || "")}
+                    data={diagnosticos.map((d) => ({ value: d.id, label: d.nombre }))}
+                    searchable
+                    clearable
                     styles={{
                       label: {
                         fontWeight: 600,
@@ -647,7 +666,9 @@ export const RegistrationStepper: React.FC = () => {
                           >
                             Diagnóstico:
                           </Text>
-                          <Text size="sm">{diagnostico}</Text>
+                          <Text size="sm">
+                            {diagnosticos.find((d) => d.id === diagnostico)?.nombre || "—"}
+                          </Text>
                         </Group>
                       )}
                       <Group gap="xs">

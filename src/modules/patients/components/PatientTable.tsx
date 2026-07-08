@@ -4,13 +4,14 @@ import { IconPencil, IconActivity } from "@tabler/icons-react";
 import { IconButton } from "../../../components/UI/IconButton";
 import { RepresentanteInfoModal } from "./RepresentanteInfoModal";
 import { EditPatientModal } from "./EditPatientModal";
-import { type Paciente, type Representante } from "../types";
+import { type Paciente, type Representante, type Diagnostico } from "../types";
 import { formatDate } from "../../../utils/date";
 import { FilterDropdown } from "../../../components/UI/FilterDropdown";
 
 export interface PacienteTableProps {
   pacientes: Paciente[];
   representantes: Representante[];
+  diagnosticos: Diagnostico[];
   searchQuery: string;
   filterStatus: string;
   filterSexo?: string;
@@ -24,7 +25,7 @@ export interface PacienteTableProps {
       nombres: string;
       apellidos: string;
       fecha_nacimiento: string;
-      diagnostico?: string;
+      id_diagnostico?: string;
       sexo?: string;
       estado: Paciente["estado"];
     },
@@ -42,6 +43,7 @@ export interface PacienteTableProps {
 export const PacienteTable: React.FC<PacienteTableProps> = ({
   pacientes,
   representantes,
+  diagnosticos,
   searchQuery,
   filterStatus,
   filterSexo = "Todos",
@@ -65,7 +67,7 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
     const matchesSearch =
       fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       repName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (paciente.diagnostico || "")
+      (paciente.diagnostico_nombre || "")
         .toLowerCase()
         .includes(searchQuery.toLowerCase());
 
@@ -123,7 +125,7 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
           </Text>
         </Table.Td>
         <Table.Td>
-          <Text size="sm">{paciente.diagnostico || "—"}</Text>
+          <Text size="sm">{paciente.diagnostico_nombre || "—"}</Text>
         </Table.Td>
         <Table.Td>
           <Text size="sm" c="dimmed">
@@ -238,6 +240,7 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
         }}
         paciente={selectedPaciente}
         representante={selectedRepresentante}
+        diagnosticos={diagnosticos}
         onSave={onUpdatePaciente || (async () => {})}
       />
       <RepresentanteInfoModal

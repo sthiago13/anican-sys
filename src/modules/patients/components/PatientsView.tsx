@@ -80,6 +80,7 @@ export function PatientsView() {
   const {
     pacientes,
     representantes,
+    diagnosticos,
     loading,
     handleUpdateStatus,
     handleUpdatePaciente,
@@ -322,6 +323,7 @@ export function PatientsView() {
         <PacienteTable
           pacientes={pacientes}
           representantes={representantes}
+          diagnosticos={diagnosticos}
           searchQuery={searchQuery}
           filterStatus={filterStatus}
           filterSexo={filterSexo}
