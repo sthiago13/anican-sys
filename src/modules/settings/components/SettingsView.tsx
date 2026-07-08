@@ -1,7 +1,8 @@
-import { Stack, Title, Text, Card, Divider, Group } from "@mantine/core";
-import { Button } from "../../../components/UI/Button";
+import { Stack, Title, Text, Card, Divider, Group, SegmentedControl, useMantineColorScheme, type MantineColorScheme } from "@mantine/core";
 
 export function SettingsView() {
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+
   return (
     <Stack gap="xl" className="anican-fade-in">
       <div>
@@ -38,9 +39,16 @@ export function SettingsView() {
                 Cambiar la apariencia de la interfaz
               </Text>
             </div>
-            <Button variant="outline" color="gray" disabled>
-              Tema Claro (Predeterminado)
-            </Button>
+            <SegmentedControl
+              value={colorScheme}
+              onChange={(value) => setColorScheme(value as MantineColorScheme)}
+              data={[
+                { label: "Claro", value: "light" },
+                { label: "Oscuro", value: "dark" },
+                { label: "Sistema", value: "auto" },
+              ]}
+              color="orange"
+            />
           </Group>
         </Stack>
       </Card>

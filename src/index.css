@@ -44,6 +44,34 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+[data-mantine-color-scheme="dark"] {
+  /* Paleta Institucional Anican (Adaptada para mayor contraste sobre fondo oscuro) */
+  --anican-azul-claro: #90caf9;
+  --anican-azul-claro-light: rgba(144, 202, 249, 0.15);
+  --anican-azul-oscuro: #e3f2fd;
+  --anican-azul-medio: #90caf9;
+
+  /* Neutrales para Modo Oscuro */
+  --anican-bg: #141517;
+  --anican-bg-card: #1c1d21;
+  --anican-border: #2d3035;
+  --anican-text: #c1c2c5;
+  --anican-text-heading: #f8f9fa;
+  --anican-text-muted: #7d8084;
+  --anican-naranja-light: rgba(245, 139, 5, 0.15);
+  --anican-amarillo-light: rgba(255, 194, 47, 0.15);
+
+  /* Sombras oscuras */
+  --anican-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --anican-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --anican-shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.55);
+}
+
+/* Transiciones de tema globales */
+body, #root, main, aside, .mantine-Card-root, .mantine-Table-root, .mantine-Divider-root {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
 /* Reset */
 *,
 *::before,

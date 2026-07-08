@@ -1,12 +1,12 @@
 // Interface alineada a la tabla `pacientes` de Supabase
 export interface Paciente {
   id: string;
-  id_representante: string;
+  id_representante?: string;
   nombres: string;
   apellidos: string;
   fecha_nacimiento: string;
-  diagnostico: string;
-  sexo: string;
+  diagnostico?: string;
+  sexo?: string;
   estado: "Activo" | "Fallecido" | "Inactivo";
   created_at?: string;
   // Joined data from representante (optional, for display)
