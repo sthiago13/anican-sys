@@ -115,7 +115,7 @@ export function DonationsView() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`}
-            icon={<IconCash size={24} />}
+            icon={<IconCash size={48} />}
             color="green"
           />
         </Grid.Col>
@@ -126,7 +126,7 @@ export function DonationsView() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`}
-            icon={<IconHeartHandshake size={24} />}
+            icon={<IconHeartHandshake size={48} />}
             color="blue"
           />
         </Grid.Col>
@@ -134,7 +134,7 @@ export function DonationsView() {
           <StatCard
             title="Ayudas Entregadas"
             value={`${totalEntregadasCount} egresos`}
-            icon={<IconUserHeart size={24} />}
+            icon={<IconUserHeart size={48} />}
             color="orange"
           />
         </Grid.Col>

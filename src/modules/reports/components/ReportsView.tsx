@@ -381,7 +381,7 @@ export const ReportsView: React.FC = () => {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`}
-                icon={<IconHeartHandshake size={32} />}
+                icon={<IconHeartHandshake size={48} />}
                 color="teal"
               />
             </Grid.Col>
@@ -393,7 +393,7 @@ export const ReportsView: React.FC = () => {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`}
-                icon={<IconCash size={32} />}
+                icon={<IconCash size={48} />}
                 color="orange"
               />
             </Grid.Col>
@@ -405,7 +405,7 @@ export const ReportsView: React.FC = () => {
                   minimumFractionDigits: 2,
                   maximumFractionDigits: 2,
                 })}`}
-                icon={summary.balanceNetoUsd >= 0 ? <IconTrendingUp size={32} /> : <IconTrendingDown size={32} />}
+                icon={summary.balanceNetoUsd >= 0 ? <IconTrendingUp size={48} /> : <IconTrendingDown size={48} />}
                 color={summary.balanceNetoUsd >= 0 ? "blue" : "red"}
                 trend={trendBalance}
               />
@@ -418,7 +418,7 @@ export const ReportsView: React.FC = () => {
               <StatCard
                 title="Niños Beneficiados"
                 value={summary.pacientesUnicosBeneficiados}
-                icon={<IconUsers size={32} />}
+                icon={<IconUsers size={48} />}
                 color="indigo"
               />
             </Grid.Col>
@@ -427,7 +427,7 @@ export const ReportsView: React.FC = () => {
               <StatCard
                 title="Volumen Ayudas Otorgadas"
                 value={`${summary.ayudasTotalesEntregadas} unidades`}
-                icon={<IconClipboardList size={32} />}
+                icon={<IconClipboardList size={48} />}
                 color="cyan"
               />
             </Grid.Col>
