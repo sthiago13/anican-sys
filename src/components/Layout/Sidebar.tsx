@@ -11,6 +11,7 @@ import {
   IconShieldLock,
   IconClipboardList,
   IconAddressBook,
+  IconPresentationAnalytics,
 } from '@tabler/icons-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '../UI/ConfirmModal';
@@ -59,6 +60,7 @@ export const Sidebar: React.FC = () => {
     { value: '/registro', label: 'Nuevo Registro', icon: <IconUserPlus size={18} stroke={1.5} /> },
     { value: '/diagnosticos', label: 'Diagnósticos', icon: <IconStethoscope size={18} stroke={1.5} /> },
     { value: '/donaciones', label: 'Donaciones', icon: <IconHeartHandshake size={18} stroke={1.5} /> },
+    { value: '/reportes', label: 'Reportes', icon: <IconPresentationAnalytics size={18} stroke={1.5} /> },
     { value: '/ayudas', label: 'Catálogo de Ayudas', icon: <IconClipboardList size={18} stroke={1.5} /> },
     ...(esAdmin ? [{ value: '/usuarios', label: 'Usuarios', icon: <IconShieldLock size={18} stroke={1.5} /> }] : []),
     { value: '/configuracion', label: 'Configuración', icon: <IconSettings size={18} stroke={1.5} /> },
@@ -72,6 +74,7 @@ export const Sidebar: React.FC = () => {
   return (
     <>
       <Box
+        component="aside"
         style={{
           width: 260,
           height: '100vh',

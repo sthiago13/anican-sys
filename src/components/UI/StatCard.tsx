@@ -51,7 +51,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           radius="md"
           styles={{
             root: {
-              background: `var(--mantine-color-${color}-light)`,
+              backgroundColor: "transparent",
               color: `var(--mantine-color-${color}-filled)`,
             },
           }}

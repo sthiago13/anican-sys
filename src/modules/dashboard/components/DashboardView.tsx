@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Stack, Title, Text, Grid, Divider, Card, Group, Center, Loader, SegmentedControl } from "@mantine/core";
-import { IconActivity, IconHeartHandshake, IconCash } from "@tabler/icons-react";
+import { IconActivity, IconHeartHandshake, IconCash, IconPresentationAnalytics } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../../../components/UI/StatCard";
 import { PacienteTable } from "../../patients/components/PatientTable";
@@ -166,7 +166,7 @@ export function DashboardView() {
           <StatCard
             title="Niños Activos"
             value={totalPacientesActivos}
-            icon={<IconActivity size={24} />}
+            icon={<IconActivity size={48} />}
             color="teal"
             trend={statsActivos.trend}
           />
@@ -178,7 +178,7 @@ export function DashboardView() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`}
-            icon={<IconHeartHandshake size={24} />}
+            icon={<IconHeartHandshake size={48} />}
             color="blue"
             trend={statsRecibidas.trend}
           />
@@ -190,7 +190,7 @@ export function DashboardView() {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             })}`}
-            icon={<IconCash size={24} />}
+            icon={<IconCash size={48} />}
             color="green"
             trend={statsEntregadas.trend}
           />
@@ -198,6 +198,42 @@ export function DashboardView() {
       </Grid>
 
       <Divider />
+
+      <Card
+        withBorder
+        radius="md"
+        p="md"
+        shadow="xs"
+        className="anican-card-hover"
+        style={{
+          backgroundColor: "var(--anican-naranja-light)",
+          borderColor: "var(--anican-naranja)",
+        }}
+      >
+        <Group justify="space-between" align="center" wrap="nowrap">
+          <Group gap="md" wrap="nowrap">
+            <Center style={{ color: "var(--anican-naranja)" }}>
+              <IconPresentationAnalytics size={36} stroke={1.5} />
+            </Center>
+            <div>
+              <Text fw={600} size="sm" c="var(--anican-azul-oscuro)">
+                Acceso Rápido a Reportes de Gestión
+              </Text>
+              <Text size="xs" c="dimmed">
+                Visualiza estadísticas avanzadas, finanzas consolidadas e históricos listos para patrocinadores.
+              </Text>
+            </div>
+          </Group>
+          <Button
+            color="orange"
+            radius="md"
+            onClick={() => navigate("/reportes")}
+            styles={{ root: { flexShrink: 0 } }}
+          >
+            Ver Reportes
+          </Button>
+        </Group>
+      </Card>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
         <Group justify="space-between" mb="md">

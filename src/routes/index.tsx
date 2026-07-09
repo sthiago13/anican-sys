@@ -6,6 +6,7 @@ import { PatientsView } from "../modules/patients/components/PatientsView";
 import { RegistrationStepper } from "../modules/patients/components/RegistrationStepper";
 import { DonationsView } from "../modules/donations/components/DonationsView";
 import { SettingsView } from "../modules/settings/components/SettingsView";
+import { ReportsView } from "../modules/reports/components/ReportsView";
 import { DiagnosticsView } from "../modules/diagnostics/components/DiagnosticsView";
 import { UsersView } from "../modules/users/components/UsersView";
 import { AyudasView } from "../modules/ayudas/components/AyudasView";
@@ -44,6 +45,10 @@ export const router = createBrowserRouter([
       {
         path: "donaciones",
         element: <DonationsView />,
+      },
+      {
+        path: "reportes",
+        element: <ReportsView />,
       },
       {
         path: "configuracion",

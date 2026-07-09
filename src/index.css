@@ -164,3 +164,65 @@ p {
 .anican-fade-in {
   animation: fadeInUp 0.3s ease-out;
 }
+
+/* =============================================
+   Estilos de Impresión (PDF / Físico)
+   ============================================= */
+@media print {
+  /* Ocultar elementos administrativos, barra lateral y controles */
+  .no-print,
+  aside,
+  nav,
+  button,
+  .mantine-Button-root,
+  .mantine-DatePickerInput-root,
+  .mantine-SegmentedControl-root,
+  .mantine-Divider-root:not(.print-divider) {
+    display: none !important;
+  }
+
+  /* Ajustar el layout principal para ocupar 100% de la página */
+  body, #root, main, .mantine-AppShell-main, .printable-report, aside + div {
+    background: #ffffff !important;
+    color: #000000 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Mostrar membrete institucional en impresión */
+  .print-header {
+    display: block !important;
+    margin-bottom: 2rem !important;
+  }
+
+  /* Forzar impresión de colores de fondo en gráficos y tarjetas */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Control de saltos de página para evitar cortes en gráficos o secciones */
+  .print-page-break {
+    page-break-before: always !important;
+    break-before: page !important;
+    margin-top: 2rem !important;
+    border-top: 1px solid #1a365d !important;
+  }
+
+  .mantine-Card-root,
+  .recharts-wrapper,
+  .mantine-Grid-col {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Ajustar tamaños de tipografías para impresión */
+  h1, h2, h3 {
+    color: #1a365d !important;
+  }
+}
+
