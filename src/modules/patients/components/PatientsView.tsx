@@ -26,6 +26,8 @@ import { PacienteTable } from "./PatientTable";
 import { usePatients } from "../hooks/usePatients";
 import { IconButton } from "../../../components/UI/IconButton";
 import GenderIcon from "../../../components/UI/gendersIcon";
+import { ImportModal } from "./ImportModal";
+import { IconUpload } from "@tabler/icons-react";
 
 export function PatientsView() {
   const navigate = useNavigate();
@@ -33,6 +35,7 @@ export function PatientsView() {
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterSexo, setFilterSexo] = useState("Todos");
   const [showFilters, setShowFilters] = useState(false);
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   const [filterYear, setFilterYear] = useState("Todos");
   const [filterMonth, setFilterMonth] = useState("Todos");
@@ -84,6 +87,7 @@ export function PatientsView() {
     loading,
     handleUpdateStatus,
     handleUpdatePaciente,
+    fetchData,
   } = usePatients();
 
   const years = useMemo(() => {
@@ -149,12 +153,22 @@ export function PatientsView() {
             Consulta y administra los pacientes registrados en la fundación
           </Text>
         </div>
-        <Button
-          leftSection={<IconUsers size={16} />}
-          onClick={() => navigate("/registro")}
-        >
-          Nuevo Registro
-        </Button>
+        <Group gap="sm">
+          <Button
+            variant="outline"
+            color="orange"
+            leftSection={<IconUpload size={16} />}
+            onClick={() => setImportModalOpened(true)}
+          >
+            Importar Excel
+          </Button>
+          <Button
+            leftSection={<IconUsers size={16} />}
+            onClick={() => navigate("/registro")}
+          >
+            Nuevo Registro
+          </Button>
+        </Group>
       </Group>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
@@ -334,6 +348,12 @@ export function PatientsView() {
           onUpdatePaciente={handleUpdatePaciente}
         />
       </Card>
+
+      <ImportModal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        onImportSuccess={fetchData}
+      />
     </Stack>
   );
 }

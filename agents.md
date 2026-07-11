@@ -21,9 +21,8 @@ Sistema de planificación de recursos (ERP) y gestión administrativa interna pa
 1. **Tipado Estricto:** Todo componente, propiedad o respuesta de base de datos debe estar debidamente tipado bajo interfaces claras de TypeScript.
 2. **Estilizado Consistente:** No escribir CSS tradicional ni sobreescribir estilos globales a menos que sea indispensable. Utilizar las propiedades de personalización de Mantine v9 y las variables de diseño declaradas en `src/index.css`.
 3. **Flujo de Mutaciones en DB:** Toda inserción de pacientes requiere la existencia previa de un registro de representante en cumplimiento con el esquema relacional de la base de datos.
-4. **Restricciones de Vocabulario:** Bajo ninguna circunstancia se debe emplear el término "Quirúrgica" en la documentación, interfaces de usuario, comentarios de código o registros médicos dentro del sistema.
-5. **Feature-Driven Architecture:** Todo nuevo módulo de negocio debe ser creado dentro de `src/modules/<nombre-del-modulo>/` con sus respectivos `components` y `hooks`. `App.tsx` debe permanecer únicamente como el proveedor global de contextos (`MantineProvider`, `RouterProvider`).
-6. **Uso Controlado de GitHub CLI y Git:** La interacción con el repositorio remoto a través de `git` y `gh` debe realizarse de forma consciente y controlada, asegurando que la revisión de issues, creación de ramas, commits y pull requests estén explícitamente justificados y vinculados a las tareas prioritarias del proyecto.
+4. **Feature-Driven Architecture:** Todo nuevo módulo de negocio debe ser creado dentro de `src/modules/<nombre-del-modulo>/` con sus respectivos `components` y `hooks`. `App.tsx` debe permanecer únicamente como el proveedor global de contextos (`MantineProvider`, `RouterProvider`).
+5. **Uso Controlado de GitHub CLI y Git:** La interacción con el repositorio remoto a través de `git` y `gh` debe realizarse de forma consciente y controlada, asegurando que la revisión de issues, creación de ramas, commits y pull requests estén explícitamente justificados y vinculados a las tareas prioritarias del proyecto.
 
 ## Flujo de Trabajo en GitHub (Git y gh)
 1. **Gestión de Issues:** Consultar issues abiertos usando `gh issue list` antes de iniciar tareas, y crear nuevos con labels correspondientes al detectar bugs o mejoras.
@@ -37,12 +36,6 @@ Para que los nuevos módulos y componentes visuales respondan de forma consisten
    - La paleta se adapta dinámicamente mediante el selector `[data-mantine-color-scheme="dark"]` en `src/index.css`.
    - Si añades una nueva variable de color institucional, asegúrate de definir su contraparte de alto contraste bajo el selector de modo oscuro.
 3. **Consumo de Hook de Mantine:** Si requieres lógica o estilos condicionales basados en el esquema de color, utiliza el hook `useMantineColorScheme()` de `@mantine/core`.
-
-
-## Estado Actual y Próximos Pasos
-- La arquitectura del proyecto ha sido migrada exitosamente a un modelo **Feature-Driven** con enrutamiento declarativo usando `react-router-dom`.
-- Los flujos de autenticación, listado de pacientes y el Stepper de registro ya están adaptados a la nueva estructura.
-- **Siguiente Módulo:** Implementar interfaces operativas y flujos lógicos para el control de inventario de ayudas institucionales y reportes financieros en el módulo de Donaciones.
 
 ## Uso estricto de pnpm
 - Siempre que se instale una nueva dependencia se debe usar "pnpm add <nombre_de_la_dependencia>"

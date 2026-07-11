@@ -192,6 +192,7 @@ export function usePatients() {
     loading,
     handleUpdateStatus,
     handleUpdatePaciente,
+    fetchData,
     setPacientes,
     setRepresentantes,
     setDiagnosticos,

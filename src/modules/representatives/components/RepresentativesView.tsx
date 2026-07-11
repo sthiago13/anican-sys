@@ -1,21 +1,24 @@
 import { useState } from "react";
 import { Stack, Group, Title, Text, Card, Center, Loader } from "@mantine/core";
-import { IconAddressBook } from "@tabler/icons-react";
+import { IconAddressBook, IconUpload } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { SearchInput } from "../../../components/UI/SearchInput";
 import { RepresentativeTable } from "./RepresentativeTable";
 import { RepresentativeModal } from "./RepresentativeModal";
 import { useRepresentatives } from "../hooks/useRepresentatives";
 import { type Representante } from "../types";
+import { ImportModal } from "../../patients/components/ImportModal";
 
 export function RepresentativesView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [modalOpened, setModalOpened] = useState(false);
   const [selectedRep, setSelectedRep] = useState<Representante | null>(null);
+  const [importModalOpened, setImportModalOpened] = useState(false);
 
   const {
     representantes,
     loading,
+    fetchRepresentatives,
     handleCreateRepresentative,
     handleUpdateRepresentative,
     handleDeleteRepresentative,
@@ -71,12 +74,22 @@ export function RepresentativesView() {
             Consulta, busca y administra a los tutores legales de los pacientes pediátricos
           </Text>
         </div>
-        <Button
-          leftSection={<IconAddressBook size={16} />}
-          onClick={handleCreateNew}
-        >
-          Nuevo Representante
-        </Button>
+        <Group gap="sm">
+          <Button
+            variant="outline"
+            color="orange"
+            leftSection={<IconUpload size={16} />}
+            onClick={() => setImportModalOpened(true)}
+          >
+            Importar Excel
+          </Button>
+          <Button
+            leftSection={<IconAddressBook size={16} />}
+            onClick={handleCreateNew}
+          >
+            Nuevo Representante
+          </Button>
+        </Group>
       </Group>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
@@ -107,6 +120,12 @@ export function RepresentativesView() {
         }}
         onSave={handleSave}
         representante={selectedRep}
+      />
+
+      <ImportModal
+        opened={importModalOpened}
+        onClose={() => setImportModalOpened(false)}
+        onImportSuccess={fetchRepresentatives}
       />
     </Stack>
   );

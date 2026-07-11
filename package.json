@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "seed:data": "node --env-file=.env.local scripts/seed-data.js"
   },
   "dependencies": {
     "@mantine/charts": "^9.4.1",
