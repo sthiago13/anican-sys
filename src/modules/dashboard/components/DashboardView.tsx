@@ -10,8 +10,23 @@ import { useDonations } from "../../donations/hooks/useDonations";
 
 export function DashboardView() {
   const navigate = useNavigate();
-  const { pacientes, representantes, diagnosticos, loading: loadingPatients, handleUpdateStatus, handleUpdatePaciente } = usePatients();
-  const { recibidas, entregadas, loading: loadingDonations } = useDonations();
+  const { pacientes, diagnosticos, loading: loadingPatients, handleUpdateStatus, handleUpdatePaciente } = usePatients({
+    page: 1,
+    pageSize: 5000,
+    searchQuery: "",
+    filterStatus: "Todos",
+    filterSexo: "Todos",
+    filterYear: "Todos",
+    filterMonth: "Todos",
+    filterDay: "Todos",
+  });
+  const { recibidas, entregadas, loading: loadingDonations } = useDonations({
+    pageRecibidas: 1,
+    pageEntregadas: 1,
+    pageSize: 5000,
+    searchRecibidas: "",
+    searchEntregadas: "",
+  });
 
   const [periodo, setPeriodo] = useState<"diario" | "semanal" | "mensual" | "anual">("mensual");
 
@@ -251,10 +266,7 @@ export function DashboardView() {
         </Group>
         <PacienteTable
           pacientes={pacientes.slice(0, 3)}
-          representantes={representantes}
           diagnosticos={diagnosticos}
-          searchQuery=""
-          filterStatus="Todos"
           onUpdateStatus={handleUpdateStatus}
           onUpdatePaciente={handleUpdatePaciente}
         />

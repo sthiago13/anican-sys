@@ -20,6 +20,7 @@ export interface Paciente {
   // Joined data (optional, for display)
   representante_nombre: string;
   diagnostico_nombre?: string;
+  representante?: Representante;
 }
 
 // Interface alineada a la tabla `representantes` de Supabase

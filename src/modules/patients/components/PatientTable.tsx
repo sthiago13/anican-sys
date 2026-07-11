@@ -10,14 +10,8 @@ import { FilterDropdown } from "../../../components/UI/FilterDropdown";
 
 export interface PacienteTableProps {
   pacientes: Paciente[];
-  representantes: Representante[];
+  representantes?: Representante[];
   diagnosticos: Diagnostico[];
-  searchQuery: string;
-  filterStatus: string;
-  filterSexo?: string;
-  filterYear?: string;
-  filterMonth?: string;
-  filterDay?: string;
   onUpdateStatus?: (id: string, estado: Paciente["estado"]) => void;
   onUpdatePaciente?: (
     pacienteId: string,
@@ -42,14 +36,7 @@ export interface PacienteTableProps {
 
 export const PacienteTable: React.FC<PacienteTableProps> = ({
   pacientes,
-  representantes,
   diagnosticos,
-  searchQuery,
-  filterStatus,
-  filterSexo = "Todos",
-  filterYear = "Todos",
-  filterMonth = "Todos",
-  filterDay = "Todos",
   onUpdateStatus,
   onUpdatePaciente,
 }) => {
@@ -61,45 +48,13 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
     null,
   );
   const [modalOpened, setModalOpened] = useState(false);
-  const filteredPacientes = pacientes.filter((paciente) => {
-    const fullName = `${paciente.nombres} ${paciente.apellidos}`.toLowerCase();
-    const repName = paciente.representante_nombre;
-    const matchesSearch =
-      fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      repName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (paciente.diagnostico_nombre || "")
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase());
-
-    const matchesStatus =
-      filterStatus === "Todos" || paciente.estado === filterStatus;
-
-    const matchesSexo =
-      filterSexo === "Todos" || paciente.sexo === filterSexo;
-
-    let matchesDate = true;
-    if (paciente.fecha_nacimiento) {
-      const [year, month, day] = paciente.fecha_nacimiento.split("-");
-      const matchesYear = filterYear === "Todos" || year === filterYear;
-      const matchesMonth = filterMonth === "Todos" || month === filterMonth;
-      const matchesDay = filterDay === "Todos" || day === filterDay;
-      matchesDate = matchesYear && matchesMonth && matchesDay;
-    } else {
-      matchesDate = filterYear === "Todos" && filterMonth === "Todos" && filterDay === "Todos";
-    }
-
-    return matchesSearch && matchesStatus && matchesSexo && matchesDate;
-  });
 
   const handleEditPaciente = (paciente: Paciente) => {
     setSelectedPaciente(paciente);
     setEditModalOpened(true);
   };
 
-  const selectedRepresentante = selectedPaciente
-    ? representantes.find((r) => r.id === selectedPaciente.id_representante) ||
-      null
-    : null;
+  const selectedRepresentante = selectedPaciente?.representante || null;
 
   const getStatusColor = (estado: Paciente["estado"]) => {
     switch (estado) {
@@ -114,8 +69,8 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
     }
   };
 
-  const rows = filteredPacientes.map((paciente) => {
-    const rep = representantes.find((r) => r.id === paciente.id_representante);
+  const rows = pacientes.map((paciente) => {
+    const rep = paciente.representante;
 
     return (
       <Table.Tr key={paciente.id}>

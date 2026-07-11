@@ -7,7 +7,6 @@ import { type Representante } from "../types";
 
 export interface RepresentativeTableProps {
   representantes: Representante[];
-  searchQuery: string;
   onEdit: (rep: Representante) => void;
   onDelete: (id: string) => Promise<void>;
   loading?: boolean;
@@ -15,7 +14,6 @@ export interface RepresentativeTableProps {
 
 export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
   representantes,
-  searchQuery,
   onEdit,
   onDelete,
   loading = false,
@@ -23,13 +21,6 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedRepId, setSelectedRepId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  // Filtrado de representantes según la consulta de búsqueda (Cédula o Nombres)
-  const filteredRepresentantes = representantes.filter((rep) => {
-    const cedulaMatch = rep.cedula.toLowerCase().includes(searchQuery.toLowerCase());
-    const nombresMatch = rep.nombres.toLowerCase().includes(searchQuery.toLowerCase());
-    return cedulaMatch || nombresMatch;
-  });
 
   const handleDeleteClick = (id: string) => {
     setSelectedRepId(id);
@@ -50,7 +41,7 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
     }
   };
 
-  const rows = filteredRepresentantes.map((rep) => {
+  const rows = representantes.map((rep) => {
     const tienePacientes = rep.pacientes && rep.pacientes.length > 0;
 
     return (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Stack, Group, Title, Text, Card, Center, Loader } from "@mantine/core";
+import { Stack, Group, Title, Text, Card, Center, Loader, Pagination } from "@mantine/core";
 import { IconAddressBook, IconUpload } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { SearchInput } from "../../../components/UI/SearchInput";
@@ -10,19 +10,32 @@ import { type Representante } from "../types";
 import { ImportModal } from "../../patients/components/ImportModal";
 
 export function RepresentativesView() {
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const [searchQuery, setSearchQuery] = useState("");
   const [modalOpened, setModalOpened] = useState(false);
   const [selectedRep, setSelectedRep] = useState<Representante | null>(null);
   const [importModalOpened, setImportModalOpened] = useState(false);
 
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setPage(1);
+  };
+
   const {
     representantes,
     loading,
-    fetchRepresentatives,
+    totalCount,
+    totalPages,
     handleCreateRepresentative,
     handleUpdateRepresentative,
     handleDeleteRepresentative,
-  } = useRepresentatives();
+    refetch,
+  } = useRepresentatives({
+    page,
+    pageSize,
+    searchQuery,
+  });
 
   const handleEdit = (rep: Representante) => {
     setSelectedRep(rep);
@@ -97,7 +110,7 @@ export function RepresentativesView() {
           <Group style={{ flexGrow: 1, maxWidth: 350 }}>
             <SearchInput
               placeholder="Buscar por cédula o nombre..."
-              onSearchChange={setSearchQuery}
+              onSearchChange={handleSearchChange}
               style={{ width: "100%" }}
             />
           </Group>
@@ -105,11 +118,26 @@ export function RepresentativesView() {
 
         <RepresentativeTable
           representantes={representantes}
-          searchQuery={searchQuery}
           onEdit={handleEdit}
           onDelete={handleDeleteRepresentative}
           loading={loading}
         />
+
+        {totalPages > 1 && (
+          <Group justify="space-between" mt="md" align="center">
+            <Text size="xs" c="dimmed">
+              Mostrando {representantes.length} de {totalCount} representantes
+            </Text>
+            <Pagination
+              total={totalPages}
+              value={page}
+              onChange={setPage}
+              color="orange"
+              size="sm"
+              withEdges
+            />
+          </Group>
+        )}
       </Card>
 
       <RepresentativeModal
@@ -125,7 +153,7 @@ export function RepresentativesView() {
       <ImportModal
         opened={importModalOpened}
         onClose={() => setImportModalOpened(false)}
-        onImportSuccess={fetchRepresentatives}
+        onImportSuccess={refetch}
       />
     </Stack>
   );

@@ -10,6 +10,7 @@ import {
   Popover,
   Select,
   SimpleGrid,
+  Pagination,
 } from "@mantine/core";
 import {
   IconUsers,
@@ -31,6 +32,9 @@ import { IconUpload } from "@tabler/icons-react";
 
 export function PatientsView() {
   const navigate = useNavigate();
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("Todos");
   const [filterSexo, setFilterSexo] = useState("Todos");
@@ -40,6 +44,31 @@ export function PatientsView() {
   const [filterYear, setFilterYear] = useState("Todos");
   const [filterMonth, setFilterMonth] = useState("Todos");
   const [filterDay, setFilterDay] = useState("Todos");
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setPage(1);
+  };
+  const handleStatusChange = (val: string) => {
+    setFilterStatus(val);
+    setPage(1);
+  };
+  const handleSexoChange = (val: string) => {
+    setFilterSexo(val);
+    setPage(1);
+  };
+  const handleYearChange = (val: string) => {
+    setFilterYear(val);
+    setPage(1);
+  };
+  const handleMonthChange = (val: string) => {
+    setFilterMonth(val);
+    setPage(1);
+  };
+  const handleDayChange = (val: string) => {
+    setFilterDay(val);
+    setPage(1);
+  };
 
   const months = [
     { value: "Todos", label: "Todos" },
@@ -82,39 +111,32 @@ export function PatientsView() {
 
   const {
     pacientes,
-    representantes,
     diagnosticos,
     loading,
+    totalCount,
+    totalPages,
     handleUpdateStatus,
     handleUpdatePaciente,
-    fetchData,
-  } = usePatients();
+    refetch,
+  } = usePatients({
+    page,
+    pageSize,
+    searchQuery,
+    filterStatus,
+    filterSexo,
+    filterYear,
+    filterMonth,
+    filterDay,
+  });
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    if (!pacientes || pacientes.length === 0) {
-      return ["Todos", String(currentYear)];
+    const list = ["Todos"];
+    for (let i = 0; i < 25; i++) {
+      list.push(String(currentYear - i));
     }
-
-    let minYear = currentYear;
-    let maxYear = currentYear;
-
-    pacientes.forEach((pac) => {
-      if (pac.fecha_nacimiento) {
-        const year = parseInt(pac.fecha_nacimiento.split("-")[0], 10);
-        if (!isNaN(year)) {
-          if (year < minYear) minYear = year;
-          if (year > maxYear) maxYear = year;
-        }
-      }
-    });
-
-    const yearsList = ["Todos"];
-    for (let y = maxYear; y >= minYear; y--) {
-      yearsList.push(String(y));
-    }
-    return yearsList;
-  }, [pacientes]);
+    return list;
+  }, []);
 
   const filterOptions = [
     { value: "Todos", label: "Todos" },
@@ -176,7 +198,7 @@ export function PatientsView() {
           <Group style={{ flexGrow: 1, maxWidth: 350 }}>
             <SearchInput
               placeholder="Buscar por nombre, diagnóstico o representante"
-              onSearchChange={setSearchQuery}
+              onSearchChange={handleSearchChange}
               style={{ width: "100%" }}
             />
           </Group>
@@ -199,7 +221,7 @@ export function PatientsView() {
                 options={filterOptions}
                 icon={<IconCheck size={16} stroke={2} />}
                 selectedValue={filterStatus}
-                onSelect={setFilterStatus}
+                onSelect={handleStatusChange}
               />
               <FilterDropdown
                 label="Sexo"
@@ -210,7 +232,7 @@ export function PatientsView() {
                   { value: "Femenino", label: "Femenino" },
                 ]}
                 selectedValue={filterSexo}
-                onSelect={setFilterSexo}
+                onSelect={handleSexoChange}
               />
 
               <Popover
@@ -252,7 +274,7 @@ export function PatientsView() {
                         placeholder="Año"
                         data={years}
                         value={filterYear}
-                        onChange={(val) => setFilterYear(val || "Todos")}
+                        onChange={(val) => handleYearChange(val || "Todos")}
                         size="xs"
                         comboboxProps={{ shadow: "md" }}
                       />
@@ -261,7 +283,7 @@ export function PatientsView() {
                         placeholder="Mes"
                         data={months}
                         value={filterMonth}
-                        onChange={(val) => setFilterMonth(val || "Todos")}
+                        onChange={(val) => handleMonthChange(val || "Todos")}
                         size="xs"
                         comboboxProps={{ shadow: "md" }}
                       />
@@ -270,7 +292,7 @@ export function PatientsView() {
                         placeholder="Día"
                         data={days}
                         value={filterDay}
-                        onChange={(val) => setFilterDay(val || "Todos")}
+                        onChange={(val) => handleDayChange(val || "Todos")}
                         size="xs"
                         comboboxProps={{ shadow: "md" }}
                       />
@@ -283,9 +305,9 @@ export function PatientsView() {
                         color="gray"
                         size="xs"
                         onClick={() => {
-                          setFilterYear("Todos");
-                          setFilterMonth("Todos");
-                          setFilterDay("Todos");
+                          handleYearChange("Todos");
+                          handleMonthChange("Todos");
+                          handleDayChange("Todos");
                         }}
                         styles={{
                           root: {
@@ -336,23 +358,32 @@ export function PatientsView() {
 
         <PacienteTable
           pacientes={pacientes}
-          representantes={representantes}
           diagnosticos={diagnosticos}
-          searchQuery={searchQuery}
-          filterStatus={filterStatus}
-          filterSexo={filterSexo}
-          filterYear={filterYear}
-          filterMonth={filterMonth}
-          filterDay={filterDay}
           onUpdateStatus={handleUpdateStatus}
           onUpdatePaciente={handleUpdatePaciente}
         />
+
+        {totalPages > 1 && (
+          <Group justify="space-between" mt="md" align="center">
+            <Text size="xs" c="dimmed">
+              Mostrando {pacientes.length} de {totalCount} pacientes registrados
+            </Text>
+            <Pagination
+              total={totalPages}
+              value={page}
+              onChange={setPage}
+              color="orange"
+              size="sm"
+              withEdges
+            />
+          </Group>
+        )}
       </Card>
 
       <ImportModal
         opened={importModalOpened}
         onClose={() => setImportModalOpened(false)}
-        onImportSuccess={fetchData}
+        onImportSuccess={refetch}
       />
     </Stack>
   );
