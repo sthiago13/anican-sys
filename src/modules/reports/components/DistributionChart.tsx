@@ -76,10 +76,9 @@ export const DistributionChart: React.FC<DistributionChartProps> = ({
                 size={180}
                 thickness={24}
                 data={formattedCategoriesData}
-                withLabels
                 withTooltip
                 valueFormatter={(value) =>
-                  `$ ${value.toLocaleString("es-ES", {
+                  `$\u00A0${value.toLocaleString("es-ES", {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}`
@@ -87,7 +86,7 @@ export const DistributionChart: React.FC<DistributionChartProps> = ({
               />
               
               {/* Leyenda Personalizada para visualización de montos y porcentajes */}
-              <Flex direction="column" gap={6} style={{ flexGrow: 1, width: "100%" }}>
+              <Flex direction="column" gap={8} style={{ flexGrow: 1, width: "100%" }}>
                 {formattedCategoriesData.map((item) => {
                   const total = categoriesData.reduce((sum, c) => sum + c.value, 0);
                   const porcentaje = total > 0 ? ((item.value / total) * 100).toFixed(1) : "0.0";
@@ -103,11 +102,11 @@ export const DistributionChart: React.FC<DistributionChartProps> = ({
                             flexShrink: 0,
                           }}
                         />
-                        <Text size="xs" fw={500} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: 140 }}>
+                        <Text size="xs" fw={600} style={{ textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap", maxWidth: 160, color: "var(--anican-text)" }}>
                           {item.name}
                         </Text>
                       </Group>
-                      <Text size="xs" fw={600} c="dimmed">
+                      <Text size="xs" fw={700} c="dimmed">
                         {porcentaje}%
                       </Text>
                     </Group>
@@ -144,6 +143,7 @@ export const DistributionChart: React.FC<DistributionChartProps> = ({
             style={{
               color: "var(--anican-azul-oscuro)",
               fontSize: 18,
+              fontWeight: 700,
             }}
           >
             Top 5 Ayudas Entregadas
@@ -154,11 +154,11 @@ export const DistributionChart: React.FC<DistributionChartProps> = ({
 
           {hasTopAids ? (
             <BarChart
-              h={250}
+              h={260}
               data={topAidsData}
               dataKey="nombre"
               orientation="vertical"
-              yAxisProps={{ width: 120 }}
+              yAxisProps={{ width: 140 }}
               series={[{ name: "cantidad", color: "blue.6", label: "Unidades" }]}
               gridAxis="y"
               valueFormatter={(value) => `${value.toLocaleString("es-ES")} uds`}

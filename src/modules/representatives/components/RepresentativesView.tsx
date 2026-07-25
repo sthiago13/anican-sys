@@ -11,6 +11,7 @@ import {
 } from "@mantine/core";
 import { IconAddressBook, IconUpload, IconUsers } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
+import { ExportButton } from "../../../components/UI/ExportButton";
 import { SearchInput } from "../../../components/UI/SearchInput";
 import { RepresentativeTable } from "./RepresentativeTable";
 import { RepresentativeModal } from "./RepresentativeModal";
@@ -19,6 +20,8 @@ import { type Representante, type RepresentativeFilters } from "../types";
 import { ImportModal } from "../../patients/components/ImportModal";
 import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
 import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
+import { exportToExcel, exportToCSV, type ColumnDefinition } from "../../../utils/exportUtils";
+import dayjs from "dayjs";
 
 const filterConfigs: FilterConfig[] = [
   {
@@ -38,6 +41,16 @@ const initialFilters: RepresentativeFilters = {
   asociacion: "Todos",
 };
 
+const repExportColumns: ColumnDefinition<Representante>[] = [
+  { header: "Cédula", accessor: (r) => r.cedula },
+  { header: "Nombres y Apellidos", accessor: (r) => r.nombres },
+  { header: "Teléfono 1", accessor: (r) => r.telefono_1 || "—" },
+  { header: "Teléfono 2", accessor: (r) => r.telefono_2 || "—" },
+  { header: "Residencia", accessor: (r) => r.residencia || "—" },
+  { header: "Cant. Pacientes", accessor: (r) => r.pacientes ? r.pacientes.length : 0 },
+  { header: "Pacientes a Cargo", accessor: (r) => r.pacientes && r.pacientes.length > 0 ? r.pacientes.map((p) => `${p.nombres} ${p.apellidos}`).join("; ") : "Sin pacientes" },
+];
+
 export function RepresentativesView() {
   const [page, setPage] = useState(1);
   const pageSize = 10;
@@ -45,6 +58,7 @@ export function RepresentativesView() {
   const [modalOpened, setModalOpened] = useState(false);
   const [selectedRep, setSelectedRep] = useState<Representante | null>(null);
   const [importModalOpened, setImportModalOpened] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [filters, setFilters] = useState<RepresentativeFilters>(initialFilters);
 
@@ -53,8 +67,8 @@ export function RepresentativesView() {
     setPage(1);
   };
 
-  const handleFiltersChange = (newFilters: Record<string, any>) => {
-    setFilters(newFilters as RepresentativeFilters);
+  const handleFiltersChange = (newFilters: Record<string, unknown>) => {
+    setFilters(newFilters as unknown as RepresentativeFilters);
     setPage(1);
   };
 
@@ -66,6 +80,7 @@ export function RepresentativesView() {
     handleCreateRepresentative,
     handleUpdateRepresentative,
     handleDeleteRepresentative,
+    fetchExportData,
     refetch,
   } = useRepresentatives({
     page,
@@ -73,6 +88,23 @@ export function RepresentativesView() {
     searchQuery,
     filters,
   });
+
+  const handleExport = async (format: "excel" | "csv") => {
+    try {
+      setExporting(true);
+      const dataToExport = await fetchExportData();
+      const filename = `representantes_anican_${dayjs().format("YYYY-MM-DD")}`;
+      if (format === "excel") {
+        exportToExcel(dataToExport, repExportColumns, filename, "Representantes");
+      } else {
+        exportToCSV(dataToExport, repExportColumns, filename);
+      }
+    } catch (err) {
+      console.error("Error al exportar representantes:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const handleEdit = (rep: Representante) => {
     setSelectedRep(rep);
@@ -126,6 +158,11 @@ export function RepresentativesView() {
           </Text>
         </div>
         <Group gap="sm">
+          <ExportButton
+            onExport={handleExport}
+            loading={exporting}
+          />
+
           <Button
             variant="outline"
             color="orange"

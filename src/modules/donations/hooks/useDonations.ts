@@ -359,6 +359,122 @@ export function useDonations({
     });
   };
 
+  // Obtener donaciones recibidas filtradas sin paginación
+  const fetchExportRecibidas = async (): Promise<DonacionRecibida[]> => {
+    let query = supabase
+      .from("donaciones_recibidas")
+      .select(
+        `
+          *,
+          catalogo_ayudas (
+            nombre_articulo,
+            categoria
+          )
+        `
+      );
+
+    if (searchRecibidas.trim()) {
+      const search = searchRecibidas.trim();
+      query = query.ilike("entidad_donante", `%${search}%`);
+    }
+
+    if (filtersRecibidas) {
+      if (filtersRecibidas.ayuda && filtersRecibidas.ayuda !== "Todos") {
+        query = query.eq("id_ayuda", filtersRecibidas.ayuda);
+      }
+
+      if (
+        filtersRecibidas.fechaRango &&
+        filtersRecibidas.fechaRango[0] &&
+        filtersRecibidas.fechaRango[1]
+      ) {
+        const start = formatLocalDate(filtersRecibidas.fechaRango[0]);
+        const end = formatLocalDate(filtersRecibidas.fechaRango[1]);
+        query = query.gte("fecha", start).lte("fecha", end);
+      }
+    }
+
+    const { data, error } = await query.order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data || []) as DonacionRecibida[];
+  };
+
+  // Obtener donaciones entregadas filtradas sin paginación
+  const fetchExportEntregadas = async (): Promise<DonacionEntregada[]> => {
+    let query = supabase
+      .from("donaciones_entregadas")
+      .select(
+        `
+          *,
+          pacientes (
+            nombres
+          ),
+          catalogo_ayudas (
+            nombre_articulo,
+            categoria
+          )
+        `
+      );
+
+    if (searchEntregadas.trim()) {
+      const search = searchEntregadas.trim();
+
+      const { data: pacs } = await supabase
+        .from("pacientes")
+        .select("id")
+        .ilike("nombres", `%${search}%`);
+
+      const { data: ayudasData } = await supabase
+        .from("catalogo_ayudas")
+        .select("id")
+        .ilike("nombre_articulo", `%${search}%`);
+
+      const pacIds = pacs?.map((p) => p.id) || [];
+      const ayudaIds = ayudasData?.map((a) => a.id) || [];
+
+      let orConditions = `beneficiario_externo.ilike.%${search}%,observaciones.ilike.%${search}%`;
+      if (pacIds.length > 0) {
+        orConditions += `,id_paciente.in.(${pacIds.join(",")})`;
+      }
+      if (ayudaIds.length > 0) {
+        orConditions += `,id_ayuda.in.(${ayudaIds.join(",")})`;
+      }
+      query = query.or(orConditions);
+    }
+
+    if (filtersEntregadas) {
+      if (filtersEntregadas.ayuda && filtersEntregadas.ayuda !== "Todos") {
+        query = query.eq("id_ayuda", filtersEntregadas.ayuda);
+      }
+
+      if (filtersEntregadas.tipoBeneficiario === "Paciente") {
+        query = query.not("id_paciente", "is", null);
+      } else if (filtersEntregadas.tipoBeneficiario === "Externo") {
+        query = query.is("id_paciente", null);
+      }
+
+      if (filtersEntregadas.conSoporte === "Con Soporte") {
+        query = query.eq("con_soporte", true);
+      } else if (filtersEntregadas.conSoporte === "Sin Soporte") {
+        query = query.eq("con_soporte", false);
+      }
+
+      if (
+        filtersEntregadas.fechaRango &&
+        filtersEntregadas.fechaRango[0] &&
+        filtersEntregadas.fechaRango[1]
+      ) {
+        const start = formatLocalDate(filtersEntregadas.fechaRango[0]);
+        const end = formatLocalDate(filtersEntregadas.fechaRango[1]);
+        query = query.gte("fecha", start).lte("fecha", end);
+      }
+    }
+
+    const { data, error } = await query.order("fecha", { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as DonacionEntregada[];
+  };
+
   const recibidas = recibidasData?.recibidas || [];
   const totalCountRecibidas = recibidasData?.count || 0;
   const totalPagesRecibidas = Math.ceil(totalCountRecibidas / pageSize);
@@ -386,5 +502,7 @@ export function useDonations({
     stats,
     handleSaveRecibida,
     handleSaveEntregada,
+    fetchExportRecibidas,
+    fetchExportEntregadas,
   };
 }

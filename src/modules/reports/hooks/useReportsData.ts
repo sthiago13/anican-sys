@@ -80,7 +80,18 @@ export function useReportsData() {
       setRecibidas(recData || []);
       setEntregadas((entData || []) as unknown as DonacionEntregada[]);
 
-      const mappedPacientes: Paciente[] = (pacData || []).map((pac: any) => {
+      const mappedPacientes: Paciente[] = (
+        (pacData as unknown as {
+          id: string;
+          nombres: string;
+          apellidos: string;
+          fecha_nacimiento: string;
+          sexo: string | null;
+          estado: Paciente["estado"];
+          created_at: string;
+          diagnosticos: { nombre: string } | { nombre: string }[] | null;
+        }[]) || []
+      ).map((pac) => {
         const diag = Array.isArray(pac.diagnosticos)
           ? pac.diagnosticos[0]
           : pac.diagnosticos;
@@ -107,7 +118,16 @@ export function useReportsData() {
   };
 
   useEffect(() => {
-    void fetchData();
+    let ignore = false;
+    const run = async () => {
+      if (!ignore) {
+        await fetchData();
+      }
+    };
+    void run();
+    return () => {
+      ignore = true;
+    };
   }, []);
 
   // -------------------------------------------------------------
@@ -342,6 +362,8 @@ export function useReportsData() {
     sexDemographics,
     ageDemographics,
     pacientesTotales: pacientes.filter(p => p.estado === "Activo").length,
+    filtradasRecibidas,
+    filtradasEntregadas,
     refetch: fetchData,
   };
 }

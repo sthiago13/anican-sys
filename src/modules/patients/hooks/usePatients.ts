@@ -297,6 +297,125 @@ export function usePatients({
     });
   };
 
+  // Función para obtener TODOS los pacientes filtrados sin paginación (para exportar)
+  const fetchExportData = async (): Promise<Paciente[]> => {
+    let query = supabase
+      .from("pacientes")
+      .select(
+        `
+          id,
+          id_representante,
+          id_diagnostico,
+          nombres,
+          apellidos,
+          fecha_nacimiento,
+          sexo,
+          estado,
+          created_at,
+          representantes (
+            id,
+            cedula,
+            nombres,
+            telefono_1,
+            telefono_2,
+            residencia
+          ),
+          diagnosticos (
+            nombre
+          )
+        `
+      );
+
+    if (filters) {
+      if (filters.estado && filters.estado !== "Todos") {
+        query = query.eq("estado", filters.estado);
+      }
+      if (filters.sexo && filters.sexo !== "Todos") {
+        query = query.eq("sexo", filters.sexo);
+      }
+      if (filters.diagnostico && filters.diagnostico !== "Todos") {
+        query = query.eq("id_diagnostico", filters.diagnostico);
+      }
+      if (
+        filters.nacimiento.year !== "Todos" ||
+        filters.nacimiento.month !== "Todos" ||
+        filters.nacimiento.day !== "Todos"
+      ) {
+        const y = filters.nacimiento.year === "Todos" ? "%" : filters.nacimiento.year;
+        const m = filters.nacimiento.month === "Todos" ? "%" : filters.nacimiento.month;
+        const d = filters.nacimiento.day === "Todos" ? "%" : filters.nacimiento.day;
+        const pattern = `${y}-${m}-${d}`;
+        if (pattern !== "%-%-%") {
+          query = query.like("fecha_nacimiento", pattern);
+        }
+      }
+    }
+
+    if (searchQuery.trim()) {
+      const search = searchQuery.trim();
+      const { data: reps } = await supabase
+        .from("representantes")
+        .select("id")
+        .ilike("nombres", `%${search}%`);
+
+      const { data: diags } = await supabase
+        .from("diagnosticos")
+        .select("id")
+        .ilike("nombre", `%${search}%`);
+
+      const repIds = reps?.map((r) => r.id) || [];
+      const diagIds = diags?.map((d) => d.id) || [];
+
+      let orConditions = `nombres.ilike.%${search}%,apellidos.ilike.%${search}%`;
+      if (repIds.length > 0) {
+        orConditions += `,id_representante.in.(${repIds.join(",")})`;
+      }
+      if (diagIds.length > 0) {
+        orConditions += `,id_diagnostico.in.(${diagIds.join(",")})`;
+      }
+      query = query.or(orConditions);
+    }
+
+    const { data: rawPacientes, error } = await query.order("nombres", { ascending: true });
+    if (error) throw error;
+
+    return ((rawPacientes as unknown as DbPaciente[]) || []).map((pac) => {
+      const rep = Array.isArray(pac.representantes)
+        ? pac.representantes[0]
+        : pac.representantes;
+
+      const diag = Array.isArray(pac.diagnosticos)
+        ? pac.diagnosticos[0]
+        : pac.diagnosticos;
+
+      const mappedRep: Representante | undefined = rep
+        ? {
+            id: rep.id,
+            cedula: rep.cedula,
+            nombres: rep.nombres,
+            telefono_1: rep.telefono_1 || undefined,
+            telefono_2: rep.telefono_2 || undefined,
+            residencia: rep.residencia || undefined,
+          }
+        : undefined;
+
+      return {
+        id: pac.id,
+        id_representante: pac.id_representante || undefined,
+        id_diagnostico: pac.id_diagnostico || undefined,
+        nombres: pac.nombres,
+        apellidos: pac.apellidos,
+        fecha_nacimiento: pac.fecha_nacimiento,
+        sexo: pac.sexo || undefined,
+        estado: pac.estado,
+        created_at: pac.created_at,
+        representante_nombre: rep ? rep.nombres : "—",
+        diagnostico_nombre: diag ? diag.nombre : "—",
+        representante: mappedRep,
+      };
+    });
+  };
+
   const pacientes = data?.pacientes || [];
   const totalCount = data?.count || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -309,6 +428,7 @@ export function usePatients({
     totalPages,
     handleUpdateStatus,
     handleUpdatePaciente,
+    fetchExportData,
     refetch: () => queryClient.invalidateQueries({ queryKey: ["pacientes"] }),
   };
 }

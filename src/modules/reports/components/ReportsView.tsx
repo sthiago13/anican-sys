@@ -33,6 +33,8 @@ import { DistributionChart } from "./DistributionChart";
 import { DemographicsChart } from "./DemographicsChart";
 import { utils, writeFile } from "xlsx";
 import dayjs from "dayjs";
+import { exportToCSV, type ColumnDefinition } from "../../../utils/exportUtils";
+import { type ReportFinancialPoint } from "../types";
 
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
@@ -50,17 +52,20 @@ export const ReportsView: React.FC = () => {
     sexDemographics,
     ageDemographics,
     pacientesTotales,
+    filtradasRecibidas,
+    filtradasEntregadas,
   } = useReportsData();
 
   // Estados locales temporales para retrasar la actualización de filtros
   const [tempFechaInicio, setTempFechaInicio] = React.useState<Date | null>(fechaInicio);
   const [tempFechaFin, setTempFechaFin] = React.useState<Date | null>(fechaFin);
+  const [prevFechas, setPrevFechas] = React.useState({ inicio: fechaInicio, fin: fechaFin });
 
-  // Sincronizar estados locales cuando cambien los globales
-  React.useEffect(() => {
+  if (fechaInicio !== prevFechas.inicio || fechaFin !== prevFechas.fin) {
+    setPrevFechas({ inicio: fechaInicio, fin: fechaFin });
     setTempFechaInicio(fechaInicio);
     setTempFechaFin(fechaFin);
-  }, [fechaInicio, fechaFin]);
+  }
 
   // Función para exportar a Excel consolidando múltiples reportes en pestañas
   const handleExportExcel = () => {
@@ -118,43 +123,18 @@ export const ReportsView: React.FC = () => {
     writeFile(wb, `reporte_gestion_anican_${dayjs().format("YYYY-MM-DD")}.xlsx`);
   };
 
-  // Función para exportar los datos financieros a CSV
+  // Función para exportar los datos financieros a CSV reutilizando exportToCSV centralizado
   const handleExportFinancialsCSV = () => {
     if (financialsChartData.length === 0) return;
 
-    const headers = ["Periodo", "Ingresos Recibidos (USD)", "Egresos Entregados (USD)", "Balance Neto (USD)"];
-    const rows = financialsChartData.map((item) => [
-      item.periodo,
-      item.ingresos,
-      item.egresos,
-      (item.ingresos - item.egresos).toFixed(2),
-    ]);
+    const columns: ColumnDefinition<ReportFinancialPoint>[] = [
+      { header: "Periodo", accessor: (item) => item.periodo },
+      { header: "Ingresos Recibidos (USD)", accessor: (item) => item.ingresos },
+      { header: "Egresos Entregados (USD)", accessor: (item) => item.egresos },
+      { header: "Balance Neto (USD)", accessor: (item) => Number((item.ingresos - item.egresos).toFixed(2)) },
+    ];
 
-    exportToCSV(rows, headers, `reporte_financiero_${dayjs().format("YYYY-MM-DD")}.csv`);
-  };
-
-  // Utilidad nativa de exportación a CSV con BOM UTF-8 (compatible con Excel)
-  const exportToCSV = (data: any[][], headers: string[], filename: string) => {
-    const csvContent = [
-      headers.join(","),
-      ...data.map((row) =>
-        row
-          .map((val) => {
-            const text = String(val ?? "").replace(/"/g, '""');
-            return `"${text}"`;
-          })
-          .join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    exportToCSV(financialsChartData, columns, `reporte_financiero_${dayjs().format("YYYY-MM-DD")}`);
   };
 
   // Acción para imprimir el reporte en formato PDF
@@ -313,7 +293,9 @@ export const ReportsView: React.FC = () => {
             label="Fecha Inicio"
             placeholder="Seleccione fecha"
             value={tempFechaInicio}
-            onChange={(val: any) => setTempFechaInicio(val)}
+            onChange={(val: string | Date | null) =>
+              setTempFechaInicio(val ? new Date(val) : null)
+            }
             clearable
             maxDate={tempFechaFin || undefined}
             styles={{ root: { flexGrow: 1 } }}
@@ -324,7 +306,9 @@ export const ReportsView: React.FC = () => {
             label="Fecha Fin"
             placeholder="Seleccione fecha"
             value={tempFechaFin}
-            onChange={(val: any) => setTempFechaFin(val)}
+            onChange={(val: string | Date | null) =>
+              setTempFechaFin(val ? new Date(val) : null)
+            }
             clearable
             minDate={tempFechaInicio || undefined}
             maxDate={new Date()}
@@ -444,7 +428,10 @@ export const ReportsView: React.FC = () => {
         <Title order={2} c="var(--anican-azul-oscuro)" size={20}>
           Histórico de Finanzas
         </Title>
-        <FinancialsChart data={financialsChartData} />
+        <FinancialsChart
+          recibidas={filtradasRecibidas}
+          entregadas={filtradasEntregadas}
+        />
       </Stack>
 
       <Divider my="sm" className="print-page-break" />

@@ -398,3 +398,25 @@ p {
   }
 }
 
+/* =============================================
+   AJUSTE DE ANCHO DE TOOLTIPS DE GRÁFICOS
+   ============================================= */
+.recharts-tooltip-wrapper {
+  z-index: 1000 !important;
+}
+
+.mantine-Charts-tooltip,
+.mantine-Charts-tooltipRow,
+.recharts-default-tooltip,
+[class*="mantine-Charts-tooltip"] * {
+  white-space: nowrap !important;
+}
+
+.mantine-Charts-tooltipRow > *:last-child,
+div[class*="tooltipValue"],
+span[class*="tooltipValue"] {
+  white-space: nowrap !important;
+  min-width: max-content !important;
+}
+
+

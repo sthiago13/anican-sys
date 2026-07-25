@@ -18,6 +18,7 @@ import {
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/UI/Button";
+import { ExportButton } from "../../../components/UI/ExportButton";
 import { SearchInput } from "../../../components/UI/SearchInput";
 import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
 import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
@@ -26,6 +27,9 @@ import { usePatients } from "../hooks/usePatients";
 import GenderIcon from "../../../components/UI/gendersIcon";
 import { ImportModal } from "./ImportModal";
 import { type PatientFilters } from "../types";
+import { exportToExcel, exportToCSV, type ColumnDefinition } from "../../../utils/exportUtils";
+import { type Paciente } from "../types";
+import dayjs from "dayjs";
 
 const initialFilters: PatientFilters = {
   estado: "Todos",
@@ -38,6 +42,18 @@ const initialFilters: PatientFilters = {
   },
 };
 
+const patientExportColumns: ColumnDefinition<Paciente>[] = [
+  { header: "Nombres", accessor: (p) => p.nombres },
+  { header: "Apellidos", accessor: (p) => p.apellidos },
+  { header: "Sexo", accessor: (p) => p.sexo || "—" },
+  { header: "Fecha Nacimiento", accessor: (p) => p.fecha_nacimiento ? dayjs(p.fecha_nacimiento).format("DD/MM/YYYY") : "—" },
+  { header: "Diagnóstico", accessor: (p) => p.diagnostico_nombre || "—" },
+  { header: "Representante Legal", accessor: (p) => p.representante_nombre || "—" },
+  { header: "Cédula Representante", accessor: (p) => p.representante?.cedula || "—" },
+  { header: "Teléfono Contacto", accessor: (p) => p.representante?.telefono_1 || p.representante?.telefono_2 || "—" },
+  { header: "Estado", accessor: (p) => p.estado },
+];
+
 export function PatientsView() {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
@@ -45,6 +61,7 @@ export function PatientsView() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [importModalOpened, setImportModalOpened] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const [filters, setFilters] = useState<PatientFilters>(initialFilters);
 
@@ -53,8 +70,8 @@ export function PatientsView() {
     setPage(1);
   };
 
-  const handleFiltersChange = (newFilters: Record<string, any>) => {
-    setFilters(newFilters as PatientFilters);
+  const handleFiltersChange = (newFilters: Record<string, unknown>) => {
+    setFilters(newFilters as unknown as PatientFilters);
     setPage(1);
   };
 
@@ -66,6 +83,7 @@ export function PatientsView() {
     totalPages,
     handleUpdateStatus,
     handleUpdatePaciente,
+    fetchExportData,
     refetch,
   } = usePatients({
     page,
@@ -73,6 +91,23 @@ export function PatientsView() {
     searchQuery,
     filters,
   });
+
+  const handleExport = async (format: "excel" | "csv") => {
+    try {
+      setExporting(true);
+      const dataToExport = await fetchExportData();
+      const filename = `pacientes_anican_${dayjs().format("YYYY-MM-DD")}`;
+      if (format === "excel") {
+        exportToExcel(dataToExport, patientExportColumns, filename, "Pacientes");
+      } else {
+        exportToCSV(dataToExport, patientExportColumns, filename);
+      }
+    } catch (err) {
+      console.error("Error al exportar pacientes:", err);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const filterConfigs: FilterConfig[] = useMemo(() => {
     const diagsOptions = [
@@ -152,6 +187,11 @@ export function PatientsView() {
           </Text>
         </div>
         <Group gap="sm">
+          <ExportButton
+            onExport={handleExport}
+            loading={exporting}
+          />
+
           <Button
             variant="outline"
             color="orange"

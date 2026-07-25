@@ -53,6 +53,7 @@ export const DemographicsChart: React.FC<DemographicsChartProps> = ({
             style={{
               color: "var(--anican-azul-oscuro)",
               fontSize: 18,
+              fontWeight: 700,
             }}
           >
             Pacientes por Diagnóstico
@@ -67,7 +68,7 @@ export const DemographicsChart: React.FC<DemographicsChartProps> = ({
               data={diagnosticsData}
               dataKey="label"
               orientation="vertical"
-              yAxisProps={{ width: 120 }}
+              yAxisProps={{ width: 140 }}
               series={[{ name: "cantidad", color: "teal.6", label: "Pacientes" }]}
               gridAxis="y"
               valueFormatter={(value) => `${value} niños`}
@@ -103,6 +104,7 @@ export const DemographicsChart: React.FC<DemographicsChartProps> = ({
                 style={{
                   color: "var(--anican-azul-oscuro)",
                   fontSize: 18,
+                  fontWeight: 700,
                 }}
               >
                 Distribución por Rango de Edad
@@ -113,7 +115,7 @@ export const DemographicsChart: React.FC<DemographicsChartProps> = ({
 
               {hasAge ? (
                 <BarChart
-                  h={120}
+                  h={130}
                   data={ageData}
                   dataKey="label"
                   series={[{ name: "cantidad", color: "orange.5", label: "Niños" }]}
@@ -121,7 +123,7 @@ export const DemographicsChart: React.FC<DemographicsChartProps> = ({
                   valueFormatter={(value) => `${value} niños`}
                 />
               ) : (
-                <Group justify="center" align="center" style={{ height: 120 }}>
+                <Group justify="center" align="center" style={{ height: 130 }}>
                   <Text c="dimmed" size="sm">
                     No hay información de edad disponible.
                   </Text>
@@ -148,6 +150,7 @@ export const DemographicsChart: React.FC<DemographicsChartProps> = ({
                 style={{
                   color: "var(--anican-azul-oscuro)",
                   fontSize: 18,
+                  fontWeight: 700,
                 }}
               >
                 Distribución por Sexo
@@ -181,11 +184,11 @@ export const DemographicsChart: React.FC<DemographicsChartProps> = ({
                                 flexShrink: 0,
                               }}
                             />
-                            <Text size="xs" fw={500}>
+                            <Text size="xs" fw={600} style={{ color: "var(--anican-text)" }}>
                               {item.name}
                             </Text>
                           </Group>
-                          <Text size="xs" fw={600} c="dimmed">
+                          <Text size="xs" fw={700} c="dimmed">
                             {item.value} ({porcentaje}%)
                           </Text>
                         </Group>
