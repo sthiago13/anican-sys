@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Stack, Title, Text, Card, Group, Table, ActionIcon, Center, Loader, Badge, Tooltip } from "@mantine/core";
-import { IconEdit, IconPlus } from "@tabler/icons-react";
+import { IconEdit, IconUserPlus } from "@tabler/icons-react";
 import { Navigate } from "react-router-dom";
 import { Button } from "../../../components/UI/Button";
 import { SearchInput } from "../../../components/UI/SearchInput";
@@ -19,7 +19,6 @@ export function UsersView() {
   const [createUserOpened, setCreateUserOpened] = useState(false);
   const [selectedUser, setSelectedUser] = useState<Perfil | null>(null);
 
-  // Seguridad en Frontend: Solo administradores pueden ver esta vista
   if (authLoading) {
     return (
       <Center style={{ height: "70vh" }}>
@@ -33,12 +32,11 @@ export function UsersView() {
   }
 
   const filteredUsuarios = usuarios.filter((u) =>
-    u.nombres.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.rol.toLowerCase().includes(searchQuery.toLowerCase())
+    u.nombres.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const handleEditRole = (usuario: Perfil) => {
-    setSelectedUser(usuario);
+  const handleEditRole = (user: Perfil) => {
+    setSelectedUser(user);
     setModalOpened(true);
   };
 
@@ -60,22 +58,22 @@ export function UsersView() {
           </Text>
         </div>
         <Button
-          leftSection={<IconPlus size={16} />}
+          leftSection={<IconUserPlus size={16} />}
           onClick={() => setCreateUserOpened(true)}
         >
-          Nuevo Usuario
+          Crear Usuario
         </Button>
       </Group>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
-        <Group justify="space-between" mb="lg">
-          <Group style={{ flexGrow: 1, maxWidth: 350 }}>
+        <Group justify="space-between" mb="md" align="center">
+          <div style={{ flexGrow: 1, maxWidth: 350 }}>
             <SearchInput
-              placeholder="Buscar por nombre o rol..."
+              placeholder="Buscar usuario por nombre..."
               onSearchChange={setSearchQuery}
               style={{ width: "100%" }}
             />
-          </Group>
+          </div>
         </Group>
 
         {usersLoading && usuarios.length === 0 ? (
@@ -83,78 +81,83 @@ export function UsersView() {
             <Loader color="orange" size="xl" type="bars" />
           </Center>
         ) : (
-          <Table striped highlightOnHover verticalSpacing="sm">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Nombre Completo</Table.Th>
-                <Table.Th>Rol del Usuario</Table.Th>
-                <Table.Th>Fecha de Registro</Table.Th>
-                <Table.Th style={{ width: 100, textAlign: "right" }}>Acciones</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filteredUsuarios.length === 0 ? (
+          <div className="anican-table-container">
+            <Table striped highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
                 <Table.Tr>
-                  <Table.Td colSpan={4}>
-                    <Text ta="center" py="xl" c="dimmed">
-                      {searchQuery ? "No se encontraron usuarios que coincidan con la búsqueda." : "No hay usuarios registrados."}
-                    </Text>
-                  </Table.Td>
+                  <Table.Th style={{ width: "35%" }}>Nombre Completo</Table.Th>
+                  <Table.Th style={{ width: "25%" }}>Rol del Usuario</Table.Th>
+                  <Table.Th style={{ width: "25%" }}>Fecha de Registro</Table.Th>
+                  <Table.Th style={{ width: "15%", textAlign: "right" }}>Acciones</Table.Th>
                 </Table.Tr>
-              ) : (
-                filteredUsuarios.map((u) => {
-                  const esPropioPerfil = u.id === perfilActual.id;
-                  return (
-                    <Table.Tr key={u.id}>
-                      <Table.Td>
-                        <Group gap="xs">
-                          <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
-                            {u.nombres}
-                          </Text>
-                          {esPropioPerfil && (
-                            <Badge color="gray" size="xs" variant="outline">
-                              Tú
-                            </Badge>
-                          )}
-                        </Group>
-                      </Table.Td>
-                      <Table.Td>
-                        <Badge
-                          color={u.rol === "Administrador" ? "red" : "blue"}
-                          variant="light"
-                        >
-                          {u.rol}
-                        </Badge>
-                      </Table.Td>
-                      <Table.Td>
-                        <Text size="sm" c="dimmed">
-                          {u.created_at ? formatDate(u.created_at.split("T")[0]) : "—"}
-                        </Text>
-                      </Table.Td>
-                      <Table.Td>
-                        <Group gap={4} justify="flex-end">
-                          <Tooltip
-                            label={esPropioPerfil ? "No puedes cambiar tu propio rol" : "Modificar rol de acceso"}
-                            position="top"
-                            withArrow
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredUsuarios.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={4}>
+                      <Text ta="center" py="xl" c="dimmed">
+                        {searchQuery ? "No se encontraron usuarios que coincidan con la búsqueda." : "No hay usuarios registrados."}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                ) : (
+                  filteredUsuarios.map((u) => {
+                    const esPropioPerfil = u.id === perfilActual.id;
+                    return (
+                      <Table.Tr key={u.id}>
+                        <Table.Td>
+                          <Group gap="xs">
+                            <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
+                              {u.nombres}
+                            </Text>
+                            {esPropioPerfil && (
+                              <Badge color="gray" size="xs" variant="outline">
+                                Tú
+                              </Badge>
+                            )}
+                          </Group>
+                        </Table.Td>
+                        <Table.Td>
+                          <Badge
+                            color={u.rol === "Administrador" ? "red" : "blue"}
+                            variant="light"
                           >
-                            <ActionIcon
-                              variant="subtle"
-                              color="blue"
-                              onClick={() => handleEditRole(u)}
-                              disabled={esPropioPerfil}
+                            {u.rol}
+                          </Badge>
+                        </Table.Td>
+                        <Table.Td>
+                          <Text size="sm" c="dimmed">
+                            {u.created_at ? formatDate(u.created_at.split("T")[0]) : "—"}
+                          </Text>
+                        </Table.Td>
+                        <Table.Td>
+                          <Group gap={4} justify="flex-end">
+                            <Tooltip
+                              label={esPropioPerfil ? "No puedes cambiar tu propio rol" : "Modificar rol de acceso"}
+                              position="top"
+                              withArrow
                             >
-                              <IconEdit size={16} />
-                            </ActionIcon>
-                          </Tooltip>
-                        </Group>
-                      </Table.Td>
-                    </Table.Tr>
-                  );
-                })
-              )}
-            </Table.Tbody>
-          </Table>
+                              <ActionIcon
+                                variant="subtle"
+                                color="blue"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleEditRole(u);
+                                }}
+                                disabled={esPropioPerfil}
+                              >
+                                <IconEdit size={16} />
+                              </ActionIcon>
+                            </Tooltip>
+                          </Group>
+                        </Table.Td>
+                      </Table.Tr>
+                    );
+                  })
+                )}
+              </Table.Tbody>
+            </Table>
+          </div>
         )}
       </Card>
 

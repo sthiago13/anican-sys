@@ -79,14 +79,14 @@ export function DiagnosticsView() {
       </Group>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
-        <Group justify="space-between" mb="lg">
-          <Group style={{ flexGrow: 1, maxWidth: 350 }}>
+        <Group justify="space-between" mb="md" align="center">
+          <div style={{ flexGrow: 1, maxWidth: 350 }}>
             <SearchInput
               placeholder="Buscar por nombre o descripción..."
               onSearchChange={setSearchQuery}
               style={{ width: "100%" }}
             />
-          </Group>
+          </div>
         </Group>
 
         {loading && diagnosticos.length === 0 ? (
@@ -94,63 +94,71 @@ export function DiagnosticsView() {
             <Loader color="orange" size="xl" type="bars" />
           </Center>
         ) : (
-          <Table striped highlightOnHover verticalSpacing="sm">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Nombre del Diagnóstico</Table.Th>
-                <Table.Th>Descripción</Table.Th>
-                <Table.Th style={{ width: 100, textAlign: "right" }}>Acciones</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filteredDiagnosticos.length === 0 ? (
+          <div className="anican-table-container">
+            <Table striped highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
                 <Table.Tr>
-                  <Table.Td colSpan={3}>
-                    <Text ta="center" py="xl" c="dimmed">
-                      {searchQuery ? "No se encontraron diagnósticos que coincidan con la búsqueda." : "No hay diagnósticos registrados."}
-                    </Text>
-                  </Table.Td>
+                  <Table.Th style={{ width: "40%" }}>Nombre del Diagnóstico</Table.Th>
+                  <Table.Th style={{ width: "45%" }}>Descripción</Table.Th>
+                  <Table.Th style={{ width: "15%", textAlign: "right" }}>Acciones</Table.Th>
                 </Table.Tr>
-              ) : (
-                filteredDiagnosticos.map((diag) => (
-                  <Table.Tr key={diag.id}>
-                    <Table.Td>
-                      <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
-                        {diag.nombre}
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredDiagnosticos.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={3}>
+                      <Text ta="center" py="xl" c="dimmed">
+                        {searchQuery ? "No se encontraron diagnósticos que coincidan con la búsqueda." : "No hay diagnósticos registrados."}
                       </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" c="dimmed">
-                        {diag.descripcion || "—"}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap={4} justify="flex-end">
-                        <Tooltip label="Editar diagnóstico" position="top" withArrow>
-                          <ActionIcon
-                            variant="subtle"
-                            color="blue"
-                            onClick={() => handleEdit(diag)}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                        <Tooltip label="Eliminar diagnóstico" position="top" withArrow>
-                          <ActionIcon
-                            variant="subtle"
-                            color="red"
-                            onClick={() => handleDeleteClick(diag)}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                      </Group>
                     </Table.Td>
                   </Table.Tr>
-                ))
-              )}
-            </Table.Tbody>
-          </Table>
+                ) : (
+                  filteredDiagnosticos.map((diag) => (
+                    <Table.Tr key={diag.id}>
+                      <Table.Td>
+                        <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
+                          {diag.nombre}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed">
+                          {diag.descripcion || "—"}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap={4} justify="flex-end">
+                          <Tooltip label="Editar diagnóstico" position="top" withArrow>
+                            <ActionIcon
+                              variant="subtle"
+                              color="blue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(diag);
+                              }}
+                            >
+                              <IconEdit size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Eliminar diagnóstico" position="top" withArrow>
+                            <ActionIcon
+                              variant="subtle"
+                              color="red"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(diag);
+                              }}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </div>
         )}
       </Card>
 

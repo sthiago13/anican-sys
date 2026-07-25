@@ -33,3 +33,15 @@ export interface Representante {
   residencia?: string;
   created_at?: string;
 }
+
+export interface PatientFilters {
+  estado: string;
+  sexo: string;
+  diagnostico: string;
+  nacimiento: {
+    year: string;
+    month: string;
+    day: string;
+  };
+}
+

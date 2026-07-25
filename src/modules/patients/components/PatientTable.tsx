@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Table, Badge, Group, Text, Tooltip, Anchor } from "@mantine/core";
+import { Table, Badge, Group, Text, Tooltip } from "@mantine/core";
 import { IconPencil, IconActivity } from "@tabler/icons-react";
 import { IconButton } from "../../../components/UI/IconButton";
 import { RepresentanteInfoModal } from "./RepresentanteInfoModal";
@@ -103,22 +103,20 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
         </Table.Td>
         <Table.Td>
           {rep ? (
-            <Anchor
-              component="button"
-              size="sm"
-              fw={600}
+            <Badge
+              variant="light"
               color="orange"
-              onClick={() => {
+              size="sm"
+              radius="sm"
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                e.stopPropagation();
                 setSelectedRepInfo(rep);
                 setModalOpened(true);
               }}
-              style={{
-                textAlign: "left",
-                textDecoration: "none",
-              }}
             >
               {paciente.representante_nombre}
-            </Anchor>
+            </Badge>
           ) : (
             <Text size="sm" c="dimmed">
               {paciente.representante_nombre || "—"}
@@ -126,32 +124,37 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
           )}
         </Table.Td>
         <Table.Td>
-          <Group gap={8}>
+          <Group gap={8} justify="flex-end">
             <Tooltip label="Editar Paciente">
               <div>
                 <IconButton
                   icon={<IconPencil size={16} stroke={1.5} />}
                   color="blue"
-                  onClick={() => handleEditPaciente(paciente)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleEditPaciente(paciente);
+                  }}
                 />
               </div>
             </Tooltip>
             <Tooltip label="Cambiar Estado">
-              <FilterDropdown
-                icon={<IconActivity size={16} stroke={1.5} />}
-                buttonType={IconButton}
-                label="Estado"
-                options={[
-                  { value: "Activo", label: "Activo" },
-                  { value: "Inactivo", label: "Inactivo" },
-                  { value: "Fallecido", label: "Fallecido" },
-                ]}
-                selectedValue={paciente.estado}
-                onSelect={(value) =>
-                  onUpdateStatus &&
-                  onUpdateStatus(paciente.id, value as Paciente["estado"])
-                }
-              />
+              <div>
+                <FilterDropdown
+                  icon={<IconActivity size={16} stroke={1.5} />}
+                  buttonType={IconButton}
+                  label="Estado"
+                  options={[
+                    { value: "Activo", label: "Activo" },
+                    { value: "Inactivo", label: "Inactivo" },
+                    { value: "Fallecido", label: "Fallecido" },
+                  ]}
+                  selectedValue={paciente.estado}
+                  onSelect={(value) =>
+                    onUpdateStatus &&
+                    onUpdateStatus(paciente.id, value as Paciente["estado"])
+                  }
+                />
+              </div>
             </Tooltip>
           </Group>
         </Table.Td>
@@ -160,17 +163,17 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
   });
 
   return (
-    <div style={{ overflowX: "auto", width: "100%" }}>
+    <div className="anican-table-container">
       <Table striped highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Paciente</Table.Th>
-            <Table.Th>Diagnóstico</Table.Th>
-            <Table.Th>Sexo</Table.Th>
-            <Table.Th>Fecha Nac.</Table.Th>
-            <Table.Th>Estado</Table.Th>
-            <Table.Th>Representante</Table.Th>
-            <Table.Th>Acciones</Table.Th>
+            <Table.Th style={{ width: "20%" }}>Paciente</Table.Th>
+            <Table.Th style={{ width: "18%" }}>Diagnóstico</Table.Th>
+            <Table.Th style={{ width: "8%" }}>Sexo</Table.Th>
+            <Table.Th style={{ width: "12%" }}>Fecha Nac.</Table.Th>
+            <Table.Th style={{ width: "12%" }}>Estado</Table.Th>
+            <Table.Th style={{ width: "18%" }}>Representante</Table.Th>
+            <Table.Th style={{ width: "12%", textAlign: "right" }}>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>

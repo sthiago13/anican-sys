@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Stack,
   Title,
@@ -19,6 +19,10 @@ import {
   IconHeartHandshake,
   IconBuildingStore,
   IconUserHeart,
+  IconCheck,
+  IconCalendar,
+  IconFileText,
+  IconUserCheck,
 } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { StatCard } from "../../../components/UI/StatCard";
@@ -27,6 +31,21 @@ import { useDonations } from "../hooks/useDonations";
 import { RecibidaModal } from "./RecibidaModal";
 import { EntregadaModal } from "./EntregadaModal";
 import { formatDate } from "../../../utils/date";
+import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
+import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
+import { type RecibidasFilters, type EntregadasFilters } from "../types";
+
+const initialFiltersRecibidas: RecibidasFilters = {
+  ayuda: "Todos",
+  fechaRango: [null, null],
+};
+
+const initialFiltersEntregadas: EntregadasFilters = {
+  tipoBeneficiario: "Todos",
+  fechaRango: [null, null],
+  ayuda: "Todos",
+  conSoporte: "Todos",
+};
 
 export function DonationsView() {
   const [pageRecibidas, setPageRecibidas] = useState(1);
@@ -35,6 +54,14 @@ export function DonationsView() {
 
   const [searchRecibidas, setSearchRecibidas] = useState("");
   const [searchEntregadas, setSearchEntregadas] = useState("");
+
+  const [filtersRecibidas, setFiltersRecibidas] = useState<RecibidasFilters>(
+    initialFiltersRecibidas,
+  );
+
+  const [filtersEntregadas, setFiltersEntregadas] = useState<EntregadasFilters>(
+    initialFiltersEntregadas,
+  );
 
   const handleSearchRecibidas = (val: string) => {
     setSearchRecibidas(val);
@@ -49,6 +76,7 @@ export function DonationsView() {
   const {
     recibidas,
     entregadas,
+    ayudas,
     loading,
     totalCountRecibidas,
     totalPagesRecibidas,
@@ -63,7 +91,77 @@ export function DonationsView() {
     pageSize,
     searchRecibidas,
     searchEntregadas,
+    filtersRecibidas,
+    filtersEntregadas,
   });
+
+  const filterConfigsRecibidas: FilterConfig[] = useMemo(() => {
+    const ayudasOptions = [
+      { value: "Todos", label: "Todos" },
+      ...ayudas.map((a) => ({ value: a.id, label: a.nombre_articulo })),
+    ];
+    return [
+      {
+        key: "ayuda",
+        label: "Artículo/Donativo",
+        type: "select",
+        icon: <IconCheck size={16} />,
+        options: ayudasOptions,
+      },
+      {
+        key: "fechaRango",
+        label: "Rango de Fecha",
+        type: "date-range",
+        icon: <IconCalendar size={16} />,
+        placeholder: "Seleccionar fechas",
+      },
+    ];
+  }, [ayudas]);
+
+  const filterConfigsEntregadas: FilterConfig[] = useMemo(() => {
+    const ayudasOptions = [
+      { value: "Todos", label: "Todos" },
+      ...ayudas.map((a) => ({ value: a.id, label: a.nombre_articulo })),
+    ];
+    return [
+      {
+        key: "tipoBeneficiario",
+        label: "Beneficiario",
+        type: "select",
+        icon: <IconUserCheck size={16} />,
+        options: [
+          { value: "Todos", label: "Todos" },
+          { value: "Paciente", label: "Paciente Fundación" },
+          { value: "Externo", label: "Beneficiario Externo" },
+        ],
+      },
+      {
+        key: "ayuda",
+        label: "Artículo/Ayuda",
+        type: "select",
+        icon: <IconCheck size={16} />,
+        options: ayudasOptions,
+      },
+      {
+        key: "conSoporte",
+        label: "Soporte",
+        type: "select",
+        icon: <IconFileText size={16} />,
+        options: [
+          { value: "Todos", label: "Todos" },
+          { value: "Con Soporte", label: "Con Soporte" },
+          { value: "Sin Soporte", label: "Sin Soporte" },
+        ],
+      },
+      {
+        key: "fechaRango",
+        label: "Rango de Fecha",
+        type: "date-range",
+        icon: <IconCalendar size={16} />,
+        placeholder: "Seleccionar fechas",
+      },
+    ];
+  }, [ayudas]);
 
   const [activeTab, setActiveTab] = useState<string | null>("recibidas");
   const [recibidaModalOpened, setRecibidaModalOpened] = useState(false);
@@ -89,7 +187,8 @@ export function DonationsView() {
             Registro de Donaciones
           </Title>
           <Text c="dimmed">
-            Visualiza y administra los aportes recibidos e insumos entregados por la Fundación Anican
+            Visualiza y administra los aportes recibidos e insumos entregados
+            por la Fundación Anican
           </Text>
         </div>
         <Group>
@@ -143,9 +242,12 @@ export function DonationsView() {
       </Grid>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
-        <Tabs value={activeTab} onChange={setActiveTab} color="orange" variant="outline">
+        <Tabs value={activeTab} onChange={setActiveTab} color="orange">
           <Tabs.List mb="md">
-            <Tabs.Tab value="recibidas" leftSection={<IconHeartHandshake size={16} />}>
+            <Tabs.Tab
+              value="recibidas"
+              leftSection={<IconHeartHandshake size={16} />}
+            >
               Ingresos (Donaciones Recibidas) ({totalRecibidasCount})
             </Tabs.Tab>
             <Tabs.Tab value="entregadas" leftSection={<IconCash size={16} />}>
@@ -154,7 +256,7 @@ export function DonationsView() {
           </Tabs.List>
 
           <Tabs.Panel value="recibidas">
-            <Group mb="md" justify="space-between">
+            <Group mb="md" justify="space-between" align="center">
               <div style={{ flexGrow: 1, maxWidth: 350 }}>
                 <SearchInput
                   placeholder="Buscar ingresos por donante..."
@@ -162,6 +264,15 @@ export function DonationsView() {
                   style={{ width: "100%" }}
                 />
               </div>
+              <FilterBar
+                configs={filterConfigsRecibidas}
+                values={filtersRecibidas}
+                initialValues={initialFiltersRecibidas}
+                onChange={(newFilters) => {
+                  setFiltersRecibidas(newFilters as RecibidasFilters);
+                  setPageRecibidas(1);
+                }}
+              />
             </Group>
 
             {loading && recibidas.length === 0 ? (
@@ -170,80 +281,99 @@ export function DonationsView() {
               </Center>
             ) : (
               <>
-                <Table striped highlightOnHover verticalSpacing="sm">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Donante / Benefactor</Table.Th>
-                      <Table.Th>Fecha</Table.Th>
-                      <Table.Th>Monto o Detalle</Table.Th>
-                      <Table.Th>Observaciones</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {recibidas.length === 0 ? (
+                <div className="anican-table-container">
+                  <Table striped highlightOnHover verticalSpacing="sm">
+                    <Table.Thead>
                       <Table.Tr>
-                        <Table.Td colSpan={4}>
-                          <Text ta="center" py="xl" c="dimmed">
-                            No se encontraron donaciones recibidas que coincidan con la búsqueda.
-                          </Text>
-                        </Table.Td>
+                        <Table.Th style={{ width: "30%" }}>
+                          Donante / Benefactor
+                        </Table.Th>
+                        <Table.Th style={{ width: "15%" }}>Fecha</Table.Th>
+                        <Table.Th style={{ width: "30%" }}>
+                          Monto o Detalle
+                        </Table.Th>
+                        <Table.Th style={{ width: "25%" }}>
+                          Observaciones
+                        </Table.Th>
                       </Table.Tr>
-                    ) : (
-                      recibidas.map((r) => (
-                        <Table.Tr key={r.id}>
-                          <Table.Td>
-                            <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
-                              {r.entidad_donante}
-                            </Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm">{formatDate(r.fecha)}</Text>
-                          </Table.Td>
-
-                          <Table.Td>
-                            {r.catalogo_ayudas && (
-                              <Badge color="gray" variant="light" size="xs" mb={4} style={{ display: "block", width: "fit-content" }}>
-                                {r.catalogo_ayudas.nombre_articulo}
-                              </Badge>
-                            )}
-                            <Text size="sm" fw={700} c="teal">
-                              {r.monto_o_cantidad}
-                            </Text>
-                            {r.monto_original && r.moneda && (
-                              <Text size="xs" c="dimmed" mt={2}>
-                                Valoración:{" "}
-                                <strong>
-                                  {r.monto_original.toLocaleString("es-ES")}{" "}
-                                  {r.moneda}
-                                </strong>{" "}
-                                {r.moneda !== "USD" && r.monto_equivalente_usd && (
-                                  <>
-                                    (Equiv: ${" "}
-                                    {r.monto_equivalente_usd.toLocaleString("es-ES", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}{" "}
-                                    USD)
-                                  </>
-                                )}
-                              </Text>
-                            )}
-                          </Table.Td>
-                          <Table.Td style={{ maxWidth: 200 }}>
-                            <Text size="sm" c="dimmed" truncate="end">
-                              {r.observaciones || "—"}
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {recibidas.length === 0 ? (
+                        <Table.Tr>
+                          <Table.Td colSpan={4}>
+                            <Text ta="center" py="xl" c="dimmed">
+                              No se encontraron donaciones recibidas que
+                              coincidan con la búsqueda.
                             </Text>
                           </Table.Td>
                         </Table.Tr>
-                      ))
-                    )}
-                  </Table.Tbody>
-                </Table>
+                      ) : (
+                        recibidas.map((r) => (
+                          <Table.Tr key={r.id}>
+                            <Table.Td>
+                              <Text
+                                size="sm"
+                                fw={600}
+                                c="var(--anican-azul-oscuro)"
+                              >
+                                {r.entidad_donante}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{formatDate(r.fecha)}</Text>
+                            </Table.Td>
+
+                            <Table.Td>
+                              {r.catalogo_ayudas && (
+                                <Badge
+                                  color="gray"
+                                  variant="light"
+                                  size="xs"
+                                  mb={4}
+                                  style={{
+                                    display: "block",
+                                    width: "fit-content",
+                                  }}
+                                >
+                                  {r.catalogo_ayudas.nombre_articulo}
+                                </Badge>
+                              )}
+                              <Text size="sm" fw={700} c="teal">
+                                {r.monto_o_cantidad}
+                              </Text>
+                              {r.monto_original &&
+                                r.moneda &&
+                                r.monto_equivalente_usd != null && (
+                                  <Text size="xs" c="dimmed">
+                                    Equiv: ${" "}
+                                    {r.monto_equivalente_usd.toLocaleString(
+                                      "es-ES",
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      },
+                                    )}{" "}
+                                    USD
+                                  </Text>
+                                )}
+                            </Table.Td>
+                            <Table.Td style={{ maxWidth: 200 }}>
+                              <Text size="sm" c="dimmed" truncate="end">
+                                {r.observaciones || "—"}
+                              </Text>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </div>
 
                 {totalPagesRecibidas > 1 && (
                   <Group justify="space-between" mt="md" align="center">
                     <Text size="xs" c="dimmed">
-                      Mostrando {recibidas.length} de {totalCountRecibidas} ingresos
+                      Mostrando {recibidas.length} de {totalCountRecibidas}{" "}
+                      ingresos
                     </Text>
                     <Pagination
                       total={totalPagesRecibidas}
@@ -260,7 +390,7 @@ export function DonationsView() {
           </Tabs.Panel>
 
           <Tabs.Panel value="entregadas">
-            <Group mb="md" justify="space-between">
+            <Group mb="md" justify="space-between" align="center">
               <div style={{ flexGrow: 1, maxWidth: 350 }}>
                 <SearchInput
                   placeholder="Buscar egresos por paciente o ayuda..."
@@ -268,6 +398,15 @@ export function DonationsView() {
                   style={{ width: "100%" }}
                 />
               </div>
+              <FilterBar
+                configs={filterConfigsEntregadas}
+                values={filtersEntregadas}
+                initialValues={initialFiltersEntregadas}
+                onChange={(newFilters) => {
+                  setFiltersEntregadas(newFilters as EntregadasFilters);
+                  setPageEntregadas(1);
+                }}
+              />
             </Group>
 
             {loading && entregadas.length === 0 ? (
@@ -276,115 +415,159 @@ export function DonationsView() {
               </Center>
             ) : (
               <>
-                <Table striped highlightOnHover verticalSpacing="sm">
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Beneficiario</Table.Th>
-                      <Table.Th>Fecha</Table.Th>
-                      <Table.Th>Artículo / Ayuda</Table.Th>
-                      <Table.Th>Cantidad</Table.Th>
-                      <Table.Th>Costo Equivalente</Table.Th>
-                      <Table.Th style={{ textAlign: "center" }}>Soporte</Table.Th>
-                      <Table.Th>Observaciones</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {entregadas.length === 0 ? (
+                <div className="anican-table-container">
+                  <Table striped highlightOnHover verticalSpacing="sm">
+                    <Table.Thead>
                       <Table.Tr>
-                        <Table.Td colSpan={7}>
-                          <Text ta="center" py="xl" c="dimmed">
-                            No se encontraron ayudas entregadas que coincidan con la búsqueda.
-                          </Text>
-                        </Table.Td>
+                        <Table.Th style={{ width: "22%" }}>
+                          Beneficiario
+                        </Table.Th>
+                        <Table.Th style={{ width: "12%" }}>Fecha</Table.Th>
+                        <Table.Th style={{ width: "22%" }}>
+                          Artículo / Ayuda
+                        </Table.Th>
+                        <Table.Th style={{ width: "10%" }}>Cantidad</Table.Th>
+                        <Table.Th style={{ width: "18%" }}>
+                          Costo Equivalente
+                        </Table.Th>
+                        <Table.Th style={{ width: "8%", textAlign: "center" }}>
+                          Soporte
+                        </Table.Th>
+                        <Table.Th style={{ width: "16%" }}>
+                          Observaciones
+                        </Table.Th>
                       </Table.Tr>
-                    ) : (
-                      entregadas.map((e) => (
-                        <Table.Tr key={e.id}>
-                          <Table.Td>
-                            {e.pacientes ? (
-                              <Group gap={4}>
-                                <IconUserHeart size={14} style={{ color: "var(--anican-naranja)" }} />
-                                <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
-                                  {e.pacientes.nombres}
-                                </Text>
-                              </Group>
-                            ) : (
-                              <Group gap={4}>
-                                <IconBuildingStore size={14} style={{ color: "var(--anican-azul)" }} />
-                                <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
-                                  {e.beneficiario_externo || "Externo"}
-                                </Text>
-                              </Group>
-                            )}
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm">{formatDate(e.fecha)}</Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm">
-                              {e.catalogo_ayudas?.nombre_articulo || "Artículo no encontrado"}
-                            </Text>
-                          </Table.Td>
-                          <Table.Td>
-                            <Text size="sm">{e.cantidad}</Text>
-                          </Table.Td>
-                          <Table.Td>
-                            {e.moneda === "USD" ? (
-                              <Text size="sm" fw={700} c="green">
-                                $ {e.monto_equivalente.toLocaleString("es-ES", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            ) : (
-                              <Stack gap={0}>
-                                <Text size="sm" fw={700} c="green">
-                                  {e.monto_original.toLocaleString("es-ES", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}{" "}
-                                  {e.moneda}
-                                </Text>
-                                <Text size="xs" c="dimmed">
-                                  Equiv: $ {e.monto_equivalente.toLocaleString("es-ES", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2,
-                                  })}{" "}
-                                  USD
-                                </Text>
-                              </Stack>
-                            )}
-                          </Table.Td>
-                          <Table.Td style={{ textAlign: "center" }}>
-                            {e.con_soporte ? (
-                              <Tooltip label="Físico archivado en sede" withArrow>
-                                <Badge color="green" size="sm" variant="light">
-                                  Sí
-                                </Badge>
-                              </Tooltip>
-                            ) : (
-                              <Tooltip label="Sin comprobante físico" withArrow>
-                                <Badge color="red" size="sm" variant="light">
-                                  No
-                                </Badge>
-                              </Tooltip>
-                            )}
-                          </Table.Td>
-                          <Table.Td style={{ maxWidth: 150 }}>
-                            <Text size="sm" c="dimmed" truncate="end">
-                              {e.observaciones || "—"}
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {entregadas.length === 0 ? (
+                        <Table.Tr>
+                          <Table.Td colSpan={7}>
+                            <Text ta="center" py="xl" c="dimmed">
+                              No se encontraron ayudas entregadas que coincidan
+                              con la búsqueda.
                             </Text>
                           </Table.Td>
                         </Table.Tr>
-                      ))
-                    )}
-                  </Table.Tbody>
-                </Table>
+                      ) : (
+                        entregadas.map((e) => (
+                          <Table.Tr key={e.id}>
+                            <Table.Td>
+                              {e.pacientes ? (
+                                <Group gap={4}>
+                                  <IconUserHeart
+                                    size={14}
+                                    style={{ color: "var(--anican-naranja)" }}
+                                  />
+                                  <Text
+                                    size="sm"
+                                    fw={600}
+                                    c="var(--anican-azul-oscuro)"
+                                  >
+                                    {e.pacientes.nombres}
+                                  </Text>
+                                </Group>
+                              ) : (
+                                <Group gap={4}>
+                                  <IconBuildingStore
+                                    size={14}
+                                    style={{ color: "var(--anican-azul)" }}
+                                  />
+                                  <Text
+                                    size="sm"
+                                    fw={600}
+                                    c="var(--anican-azul-oscuro)"
+                                  >
+                                    {e.beneficiario_externo || "Externo"}
+                                  </Text>
+                                </Group>
+                              )}
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{formatDate(e.fecha)}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">
+                                {e.catalogo_ayudas?.nombre_articulo ||
+                                  "Artículo no encontrado"}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{e.cantidad}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              {e.moneda === "USD" ? (
+                                <Text size="sm" fw={700} c="teal">
+                                  ${" "}
+                                  {e.monto_equivalente.toLocaleString("es-ES", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              ) : (
+                                <Stack gap={0}>
+                                  <Text size="sm" fw={700} c="teal">
+                                    {e.monto_original.toLocaleString("es-ES", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}{" "}
+                                    {e.moneda}
+                                  </Text>
+                                  <Text size="xs" c="dimmed">
+                                    Equiv: ${" "}
+                                    {e.monto_equivalente.toLocaleString(
+                                      "es-ES",
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      },
+                                    )}{" "}
+                                    USD
+                                  </Text>
+                                </Stack>
+                              )}
+                            </Table.Td>
+                            <Table.Td style={{ textAlign: "center" }}>
+                              {e.con_soporte ? (
+                                <Tooltip
+                                  label="Físico archivado en sede"
+                                  withArrow
+                                >
+                                  <Badge
+                                    color="green"
+                                    size="sm"
+                                    variant="light"
+                                  >
+                                    Sí
+                                  </Badge>
+                                </Tooltip>
+                              ) : (
+                                <Tooltip
+                                  label="Sin comprobante físico"
+                                  withArrow
+                                >
+                                  <Badge color="red" size="sm" variant="light">
+                                    No
+                                  </Badge>
+                                </Tooltip>
+                              )}
+                            </Table.Td>
+                            <Table.Td style={{ maxWidth: 150 }}>
+                              <Text size="sm" c="dimmed" truncate="end">
+                                {e.observaciones || "—"}
+                              </Text>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </div>
 
                 {totalPagesEntregadas > 1 && (
                   <Group justify="space-between" mt="md" align="center">
                     <Text size="xs" c="dimmed">
-                      Mostrando {entregadas.length} de {totalCountEntregadas} egresos
+                      Mostrando {entregadas.length} de {totalCountEntregadas}{" "}
+                      egresos
                     </Text>
                     <Pagination
                       total={totalPagesEntregadas}

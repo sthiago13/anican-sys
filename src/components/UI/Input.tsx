@@ -19,7 +19,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           input: {
             transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             '&:focus': {
-              borderColor: 'var(--mantine-color-orange-filled)',
+              borderColor: 'var(--anican-naranja)',
             },
           },
           label: {

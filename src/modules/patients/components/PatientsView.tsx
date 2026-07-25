@@ -7,28 +7,36 @@ import {
   Card,
   Center,
   Loader,
-  Popover,
-  Select,
-  SimpleGrid,
   Pagination,
 } from "@mantine/core";
 import {
   IconUsers,
-  IconCalendar,
-  IconChevronDown,
-  IconFilter,
   IconCheck,
+  IconCalendar,
+  IconStethoscope,
+  IconUpload,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../../components/UI/Button";
 import { SearchInput } from "../../../components/UI/SearchInput";
-import { FilterDropdown } from "../../../components/UI/FilterDropdown";
+import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
+import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
 import { PacienteTable } from "./PatientTable";
 import { usePatients } from "../hooks/usePatients";
-import { IconButton } from "../../../components/UI/IconButton";
 import GenderIcon from "../../../components/UI/gendersIcon";
 import { ImportModal } from "./ImportModal";
-import { IconUpload } from "@tabler/icons-react";
+import { type PatientFilters } from "../types";
+
+const initialFilters: PatientFilters = {
+  estado: "Todos",
+  sexo: "Todos",
+  diagnostico: "Todos",
+  nacimiento: {
+    year: "Todos",
+    month: "Todos",
+    day: "Todos",
+  },
+};
 
 export function PatientsView() {
   const navigate = useNavigate();
@@ -36,77 +44,18 @@ export function PatientsView() {
   const pageSize = 10;
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterStatus, setFilterStatus] = useState("Todos");
-  const [filterSexo, setFilterSexo] = useState("Todos");
-  const [showFilters, setShowFilters] = useState(false);
   const [importModalOpened, setImportModalOpened] = useState(false);
 
-  const [filterYear, setFilterYear] = useState("Todos");
-  const [filterMonth, setFilterMonth] = useState("Todos");
-  const [filterDay, setFilterDay] = useState("Todos");
+  const [filters, setFilters] = useState<PatientFilters>(initialFilters);
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     setPage(1);
   };
-  const handleStatusChange = (val: string) => {
-    setFilterStatus(val);
-    setPage(1);
-  };
-  const handleSexoChange = (val: string) => {
-    setFilterSexo(val);
-    setPage(1);
-  };
-  const handleYearChange = (val: string) => {
-    setFilterYear(val);
-    setPage(1);
-  };
-  const handleMonthChange = (val: string) => {
-    setFilterMonth(val);
-    setPage(1);
-  };
-  const handleDayChange = (val: string) => {
-    setFilterDay(val);
-    setPage(1);
-  };
 
-  const months = [
-    { value: "Todos", label: "Todos" },
-    { value: "01", label: "Enero" },
-    { value: "02", label: "Febrero" },
-    { value: "03", label: "Marzo" },
-    { value: "04", label: "Abril" },
-    { value: "05", label: "Mayo" },
-    { value: "06", label: "Junio" },
-    { value: "07", label: "Julio" },
-    { value: "08", label: "Agosto" },
-    { value: "09", label: "Septiembre" },
-    { value: "10", label: "Octubre" },
-    { value: "11", label: "Noviembre" },
-    { value: "12", label: "Diciembre" },
-  ];
-
-  const days = [
-    "Todos",
-    ...Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, "0")),
-  ];
-
-  const getDateFilterLabel = () => {
-    if (
-      filterYear === "Todos" &&
-      filterMonth === "Todos" &&
-      filterDay === "Todos"
-    ) {
-      return "Todos";
-    }
-    const parts = [];
-    if (filterDay !== "Todos") parts.push(filterDay);
-    if (filterMonth !== "Todos") {
-      const monthObj = months.find((m) => m.value === filterMonth);
-      parts.push(monthObj ? monthObj.label.slice(0, 3) : filterMonth);
-    }
-    if (filterYear !== "Todos") parts.push(filterYear);
-    return parts.join("/");
+  const handleFiltersChange = (newFilters: Record<string, any>) => {
+    setFilters(newFilters as PatientFilters);
+    setPage(1);
   };
 
   const {
@@ -122,28 +71,55 @@ export function PatientsView() {
     page,
     pageSize,
     searchQuery,
-    filterStatus,
-    filterSexo,
-    filterYear,
-    filterMonth,
-    filterDay,
+    filters,
   });
 
-  const years = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const list = ["Todos"];
-    for (let i = 0; i < 25; i++) {
-      list.push(String(currentYear - i));
-    }
-    return list;
-  }, []);
+  const filterConfigs: FilterConfig[] = useMemo(() => {
+    const diagsOptions = [
+      { value: "Todos", label: "Todos" },
+      ...diagnosticos.map((d) => ({ value: d.id, label: d.nombre })),
+    ];
 
-  const filterOptions = [
-    { value: "Todos", label: "Todos" },
-    { value: "Activo", label: "Activo" },
-    { value: "Inactivo", label: "Inactivo" },
-    { value: "Fallecido", label: "Fallecido" },
-  ];
+    return [
+      {
+        key: "estado",
+        label: "Estado",
+        type: "select",
+        icon: <IconCheck size={16} stroke={2} />,
+        options: [
+          { value: "Todos", label: "Todos" },
+          { value: "Activo", label: "Activo" },
+          { value: "Inactivo", label: "Inactivo" },
+          { value: "Fallecido", label: "Fallecido" },
+        ],
+      },
+      {
+        key: "sexo",
+        label: "Sexo",
+        type: "select",
+        icon: <GenderIcon />,
+        options: [
+          { value: "Todos", label: "Todos" },
+          { value: "Masculino", label: "Masculino" },
+          { value: "Femenino", label: "Femenino" },
+        ],
+      },
+      {
+        key: "diagnostico",
+        label: "Diagnóstico",
+        type: "select",
+        icon: <IconStethoscope size={16} stroke={1.5} />,
+        options: diagsOptions,
+      },
+      {
+        key: "nacimiento",
+        label: "Nacimiento",
+        type: "date-parts",
+        icon: <IconCalendar size={16} stroke={1.5} />,
+        defaultValue: { year: "Todos", month: "Todos", day: "Todos" },
+      },
+    ];
+  }, [diagnosticos]);
 
   if (loading && pacientes.length === 0) {
     return (
@@ -202,159 +178,14 @@ export function PatientsView() {
               style={{ width: "100%" }}
             />
           </Group>
-          <Group gap="xs" wrap="nowrap" align="center">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                overflow: "hidden",
-                maxWidth: showFilters ? "600px" : "0px",
-                opacity: showFilters ? 1 : 0,
-                transition:
-                  "max-width 0.3s ease, opacity 0.25s ease, gap 0.3s ease",
-                whiteSpace: "nowrap",
-                gap: showFilters ? "8px" : "0px",
-              }}
-            >
-              <FilterDropdown
-                label="Estado"
-                options={filterOptions}
-                icon={<IconCheck size={16} stroke={2} />}
-                selectedValue={filterStatus}
-                onSelect={handleStatusChange}
-              />
-              <FilterDropdown
-                label="Sexo"
-                icon={<GenderIcon />}
-                options={[
-                  { value: "Todos", label: "Todos" },
-                  { value: "Masculino", label: "Masculino" },
-                  { value: "Femenino", label: "Femenino" },
-                ]}
-                selectedValue={filterSexo}
-                onSelect={handleSexoChange}
-              />
-
-              <Popover
-                width={320}
-                position="bottom-end"
-                withArrow
-                shadow="md"
-                trapFocus
-              >
-                <Popover.Target>
-                  <Button
-                    variant="outline"
-                    color="orange"
-                    radius="md"
-                    leftSection={<IconCalendar size={16} stroke={1.5} />}
-                    rightSection={<IconChevronDown size={14} stroke={1.5} />}
-                    styles={{
-                      root: {
-                        fontWeight: 500,
-                      },
-                    }}
-                  >
-                    <Group gap={4} wrap="nowrap">
-                      <span>Nacimiento:</span>
-                      <span style={{ fontWeight: 600 }}>
-                        {getDateFilterLabel()}
-                      </span>
-                    </Group>
-                  </Button>
-                </Popover.Target>
-                <Popover.Dropdown p="md">
-                  <Stack gap="sm">
-                    <Text size="xs" fw={600} c="var(--anican-azul-oscuro)">
-                      Filtrar por Fecha de Nacimiento
-                    </Text>
-                    <SimpleGrid cols={3} spacing="xs">
-                      <Select
-                        label="Año"
-                        placeholder="Año"
-                        data={years}
-                        value={filterYear}
-                        onChange={(val) => handleYearChange(val || "Todos")}
-                        size="xs"
-                        comboboxProps={{ shadow: "md" }}
-                      />
-                      <Select
-                        label="Mes"
-                        placeholder="Mes"
-                        data={months}
-                        value={filterMonth}
-                        onChange={(val) => handleMonthChange(val || "Todos")}
-                        size="xs"
-                        comboboxProps={{ shadow: "md" }}
-                      />
-                      <Select
-                        label="Día"
-                        placeholder="Día"
-                        data={days}
-                        value={filterDay}
-                        onChange={(val) => handleDayChange(val || "Todos")}
-                        size="xs"
-                        comboboxProps={{ shadow: "md" }}
-                      />
-                    </SimpleGrid>
-                    {(filterYear !== "Todos" ||
-                      filterMonth !== "Todos" ||
-                      filterDay !== "Todos") && (
-                      <Button
-                        variant="subtle"
-                        color="gray"
-                        size="xs"
-                        onClick={() => {
-                          handleYearChange("Todos");
-                          handleMonthChange("Todos");
-                          handleDayChange("Todos");
-                        }}
-                        styles={{
-                          root: {
-                            height: 28,
-                          },
-                        }}
-                      >
-                        Limpiar filtros
-                      </Button>
-                    )}
-                  </Stack>
-                </Popover.Dropdown>
-              </Popover>
-            </div>
-
-            <IconButton
-              variant={showFilters ? "filled" : "outline"}
-              color="orange"
-              radius="xl"
-              icon={<IconFilter size={16} stroke={1.5} />}
-              size="xl"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              {showFilters ? "Ocultar" : "Filtros"}
-              {!showFilters &&
-                (filterStatus !== "Todos" ||
-                  filterSexo !== "Todos" ||
-                  filterYear !== "Todos" ||
-                  filterMonth !== "Todos" ||
-                  filterDay !== "Todos") && (
-                  <span style={{ marginLeft: 6, fontWeight: 700 }}>
-                    (
-                    {
-                      [
-                        filterStatus !== "Todos",
-                        filterSexo !== "Todos",
-                        filterYear !== "Todos" ||
-                          filterMonth !== "Todos" ||
-                          filterDay !== "Todos",
-                      ].filter(Boolean).length
-                    }
-                    )
-                  </span>
-                )}
-            </IconButton>
-          </Group>
+          <FilterBar
+            configs={filterConfigs}
+            values={filters}
+            initialValues={initialFilters}
+            onChange={handleFiltersChange}
+          />
         </Group>
+
 
         <PacienteTable
           pacientes={pacientes}

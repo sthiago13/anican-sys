@@ -1,16 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../../config/supabase";
-import { type Paciente, type Diagnostico, type Representante } from "../types";
+import { type Paciente, type Diagnostico, type Representante, type PatientFilters } from "../types";
 
 interface UsePatientsParams {
   page: number;
   pageSize: number;
   searchQuery: string;
-  filterStatus: string;
-  filterSexo: string;
-  filterYear: string;
-  filterMonth: string;
-  filterDay: string;
+  filters?: PatientFilters;
 }
 
 interface DbPaciente {
@@ -31,11 +27,7 @@ export function usePatients({
   page,
   pageSize,
   searchQuery,
-  filterStatus,
-  filterSexo,
-  filterYear,
-  filterMonth,
-  filterDay,
+  filters,
 }: UsePatientsParams) {
   const queryClient = useQueryClient();
 
@@ -62,11 +54,7 @@ export function usePatients({
         page,
         pageSize,
         searchQuery,
-        filterStatus,
-        filterSexo,
-        filterYear,
-        filterMonth,
-        filterDay,
+        filters,
       },
     ],
     queryFn: async () => {
@@ -98,26 +86,38 @@ export function usePatients({
           { count: "exact" }
         );
 
-      // Filtro por estado
-      if (filterStatus && filterStatus !== "Todos") {
-        query = query.eq("estado", filterStatus);
-      }
+      if (filters) {
+        // Filtro por estado
+        if (filters.estado && filters.estado !== "Todos") {
+          query = query.eq("estado", filters.estado);
+        }
 
-      // Filtro por sexo
-      if (filterSexo && filterSexo !== "Todos") {
-        query = query.eq("sexo", filterSexo);
-      }
+        // Filtro por sexo
+        if (filters.sexo && filters.sexo !== "Todos") {
+          query = query.eq("sexo", filters.sexo);
+        }
 
-      // Filtro por fecha de nacimiento (like YYYY-MM-DD)
-      if (filterYear !== "Todos" || filterMonth !== "Todos" || filterDay !== "Todos") {
-        const y = filterYear === "Todos" ? "%" : filterYear;
-        const m = filterMonth === "Todos" ? "%" : filterMonth;
-        const d = filterDay === "Todos" ? "%" : filterDay;
-        const pattern = `${y}-${m}-${d}`;
-        if (pattern !== "%-%-%") {
-          query = query.like("fecha_nacimiento", pattern);
+        // Filtro por diagnóstico
+        if (filters.diagnostico && filters.diagnostico !== "Todos") {
+          query = query.eq("id_diagnostico", filters.diagnostico);
+        }
+
+        // Filtro por fecha de nacimiento (like YYYY-MM-DD)
+        if (
+          filters.nacimiento.year !== "Todos" ||
+          filters.nacimiento.month !== "Todos" ||
+          filters.nacimiento.day !== "Todos"
+        ) {
+          const y = filters.nacimiento.year === "Todos" ? "%" : filters.nacimiento.year;
+          const m = filters.nacimiento.month === "Todos" ? "%" : filters.nacimiento.month;
+          const d = filters.nacimiento.day === "Todos" ? "%" : filters.nacimiento.day;
+          const pattern = `${y}-${m}-${d}`;
+          if (pattern !== "%-%-%") {
+            query = query.like("fecha_nacimiento", pattern);
+          }
         }
       }
+
 
       // Búsqueda textual (nombre paciente, representante o diagnóstico)
       if (searchQuery.trim()) {

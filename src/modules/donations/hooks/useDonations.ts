@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../../config/supabase";
 import { useAuth } from "../../auth/hooks/useAuth";
-import { type DonacionRecibida, type DonacionEntregada } from "../types";
+import { type DonacionRecibida, type DonacionEntregada, type RecibidasFilters, type EntregadasFilters } from "../types";
 
 interface UseDonationsParams {
   pageRecibidas: number;
@@ -9,6 +9,8 @@ interface UseDonationsParams {
   pageSize: number;
   searchRecibidas: string;
   searchEntregadas: string;
+  filtersRecibidas?: RecibidasFilters;
+  filtersEntregadas?: EntregadasFilters;
 }
 
 export function useDonations({
@@ -17,11 +19,27 @@ export function useDonations({
   pageSize,
   searchRecibidas,
   searchEntregadas,
+  filtersRecibidas,
+  filtersEntregadas,
 }: UseDonationsParams) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // 1. Query para KPIs agregados globales
+  // 1. Query para Catálogo de Ayudas
+  const { data: ayudas = [] } = useQuery({
+    queryKey: ["catalogo_ayudas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("catalogo_ayudas")
+        .select("id, nombre_articulo, categoria")
+        .order("nombre_articulo", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
+  // 2. Query para KPIs agregados globales
   const { data: stats = { totalEntregadoMonetario: 0, totalRecibidoMonetario: 0, totalRecibidasCount: 0, totalEntregadasCount: 0 }, isLoading: loadingStats } = useQuery({
     queryKey: ["donations_stats"],
     queryFn: async () => {
@@ -58,9 +76,16 @@ export function useDonations({
     },
   });
 
-  // 2. Query para Donaciones Recibidas (Paginadas y Filtradas)
+  const formatLocalDate = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  // 3. Query para Donaciones Recibidas (Paginadas y Filtradas)
   const { data: recibidasData, isLoading: loadingRecibidas } = useQuery({
-    queryKey: ["donaciones_recibidas", { pageRecibidas, pageSize, searchRecibidas }],
+    queryKey: ["donaciones_recibidas", { pageRecibidas, pageSize, searchRecibidas, filtersRecibidas }],
     queryFn: async () => {
       let query = supabase
         .from("donaciones_recibidas")
@@ -80,6 +105,22 @@ export function useDonations({
         query = query.ilike("entidad_donante", `%${search}%`);
       }
 
+      if (filtersRecibidas) {
+        if (filtersRecibidas.ayuda && filtersRecibidas.ayuda !== "Todos") {
+          query = query.eq("id_ayuda", filtersRecibidas.ayuda);
+        }
+
+        if (
+          filtersRecibidas.fechaRango &&
+          filtersRecibidas.fechaRango[0] &&
+          filtersRecibidas.fechaRango[1]
+        ) {
+          const start = formatLocalDate(filtersRecibidas.fechaRango[0]);
+          const end = formatLocalDate(filtersRecibidas.fechaRango[1]);
+          query = query.gte("fecha", start).lte("fecha", end);
+        }
+      }
+
       const from = (pageRecibidas - 1) * pageSize;
       const to = pageRecibidas * pageSize - 1;
 
@@ -97,9 +138,9 @@ export function useDonations({
     placeholderData: (previousData) => previousData,
   });
 
-  // 3. Query para Donaciones Entregadas (Paginadas y Filtradas)
+  // 4. Query para Donaciones Entregadas (Paginadas y Filtradas)
   const { data: entregadasData, isLoading: loadingEntregadas } = useQuery({
-    queryKey: ["donaciones_entregadas", { pageEntregadas, pageSize, searchEntregadas }],
+    queryKey: ["donaciones_entregadas", { pageEntregadas, pageSize, searchEntregadas, filtersEntregadas }],
     queryFn: async () => {
       let query = supabase
         .from("donaciones_entregadas")
@@ -127,13 +168,13 @@ export function useDonations({
           .ilike("nombres", `%${search}%`);
 
         // Buscar artículos coincidentes
-        const { data: ayudas } = await supabase
+        const { data: ayudasData } = await supabase
           .from("catalogo_ayudas")
           .select("id")
           .ilike("nombre_articulo", `%${search}%`);
 
         const pacIds = pacs?.map((p) => p.id) || [];
-        const ayudaIds = ayudas?.map((a) => a.id) || [];
+        const ayudaIds = ayudasData?.map((a) => a.id) || [];
 
         let orConditions = `beneficiario_externo.ilike.%${search}%,observaciones.ilike.%${search}%`;
         if (pacIds.length > 0) {
@@ -143,6 +184,34 @@ export function useDonations({
           orConditions += `,id_ayuda.in.(${ayudaIds.join(",")})`;
         }
         query = query.or(orConditions);
+      }
+
+      if (filtersEntregadas) {
+        if (filtersEntregadas.ayuda && filtersEntregadas.ayuda !== "Todos") {
+          query = query.eq("id_ayuda", filtersEntregadas.ayuda);
+        }
+
+        if (filtersEntregadas.tipoBeneficiario === "Paciente") {
+          query = query.not("id_paciente", "is", null);
+        } else if (filtersEntregadas.tipoBeneficiario === "Externo") {
+          query = query.is("id_paciente", null);
+        }
+
+        if (filtersEntregadas.conSoporte === "Con Soporte") {
+          query = query.eq("con_soporte", true);
+        } else if (filtersEntregadas.conSoporte === "Sin Soporte") {
+          query = query.eq("con_soporte", false);
+        }
+
+        if (
+          filtersEntregadas.fechaRango &&
+          filtersEntregadas.fechaRango[0] &&
+          filtersEntregadas.fechaRango[1]
+        ) {
+          const start = formatLocalDate(filtersEntregadas.fechaRango[0]);
+          const end = formatLocalDate(filtersEntregadas.fechaRango[1]);
+          query = query.gte("fecha", start).lte("fecha", end);
+        }
       }
 
       const from = (pageEntregadas - 1) * pageSize;
@@ -308,6 +377,7 @@ export function useDonations({
   return {
     recibidas,
     entregadas,
+    ayudas,
     loading,
     totalCountRecibidas,
     totalPagesRecibidas,

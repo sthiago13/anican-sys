@@ -14,11 +14,16 @@ export function DashboardView() {
     page: 1,
     pageSize: 5000,
     searchQuery: "",
-    filterStatus: "Todos",
-    filterSexo: "Todos",
-    filterYear: "Todos",
-    filterMonth: "Todos",
-    filterDay: "Todos",
+    filters: {
+      estado: "Todos",
+      sexo: "Todos",
+      diagnostico: "Todos",
+      nacimiento: {
+        year: "Todos",
+        month: "Todos",
+        day: "Todos",
+      },
+    },
   });
   const { recibidas, entregadas, loading: loadingDonations } = useDonations({
     pageRecibidas: 1,
@@ -26,6 +31,16 @@ export function DashboardView() {
     pageSize: 5000,
     searchRecibidas: "",
     searchEntregadas: "",
+    filtersRecibidas: {
+      ayuda: "Todos",
+      fechaRango: [null, null],
+    },
+    filtersEntregadas: {
+      tipoBeneficiario: "Todos",
+      fechaRango: [null, null],
+      ayuda: "Todos",
+      conSoporte: "Todos",
+    },
   });
 
   const [periodo, setPeriodo] = useState<"diario" | "semanal" | "mensual" | "anual">("mensual");

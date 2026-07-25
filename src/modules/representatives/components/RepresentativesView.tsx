@@ -1,13 +1,42 @@
 import { useState } from "react";
-import { Stack, Group, Title, Text, Card, Center, Loader, Pagination } from "@mantine/core";
-import { IconAddressBook, IconUpload } from "@tabler/icons-react";
+import {
+  Stack,
+  Group,
+  Title,
+  Text,
+  Card,
+  Center,
+  Loader,
+  Pagination,
+} from "@mantine/core";
+import { IconAddressBook, IconUpload, IconUsers } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { SearchInput } from "../../../components/UI/SearchInput";
 import { RepresentativeTable } from "./RepresentativeTable";
 import { RepresentativeModal } from "./RepresentativeModal";
 import { useRepresentatives } from "../hooks/useRepresentatives";
-import { type Representante } from "../types";
+import { type Representante, type RepresentativeFilters } from "../types";
 import { ImportModal } from "../../patients/components/ImportModal";
+import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
+import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
+
+const filterConfigs: FilterConfig[] = [
+  {
+    key: "asociacion",
+    label: "Pacientes a cargo",
+    type: "select",
+    icon: <IconUsers size={16} stroke={1.5} />,
+    options: [
+      { value: "Todos", label: "Todos" },
+      { value: "Con Pacientes", label: "Con Pacientes" },
+      { value: "Sin Pacientes", label: "Sin Pacientes" },
+    ],
+  },
+];
+
+const initialFilters: RepresentativeFilters = {
+  asociacion: "Todos",
+};
 
 export function RepresentativesView() {
   const [page, setPage] = useState(1);
@@ -17,8 +46,15 @@ export function RepresentativesView() {
   const [selectedRep, setSelectedRep] = useState<Representante | null>(null);
   const [importModalOpened, setImportModalOpened] = useState(false);
 
+  const [filters, setFilters] = useState<RepresentativeFilters>(initialFilters);
+
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
+    setPage(1);
+  };
+
+  const handleFiltersChange = (newFilters: Record<string, any>) => {
+    setFilters(newFilters as RepresentativeFilters);
     setPage(1);
   };
 
@@ -35,6 +71,7 @@ export function RepresentativesView() {
     page,
     pageSize,
     searchQuery,
+    filters,
   });
 
   const handleEdit = (rep: Representante) => {
@@ -48,7 +85,7 @@ export function RepresentativesView() {
   };
 
   const handleSave = async (
-    repData: Omit<Representante, "id" | "created_at" | "pacientes">
+    repData: Omit<Representante, "id" | "created_at" | "pacientes">,
   ) => {
     if (selectedRep) {
       await handleUpdateRepresentative(selectedRep.id, repData);
@@ -84,7 +121,8 @@ export function RepresentativesView() {
             Directorio de Representantes
           </Title>
           <Text c="dimmed">
-            Consulta, busca y administra a los tutores legales de los pacientes pediátricos
+            Consulta, busca y administra a los tutores legales de los pacientes
+            pediátricos
           </Text>
         </div>
         <Group gap="sm">
@@ -114,6 +152,12 @@ export function RepresentativesView() {
               style={{ width: "100%" }}
             />
           </Group>
+          <FilterBar
+            configs={filterConfigs}
+            values={filters}
+            initialValues={initialFilters}
+            onChange={handleFiltersChange}
+          />
         </Group>
 
         <RepresentativeTable

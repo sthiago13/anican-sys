@@ -25,6 +25,18 @@
   --anican-text-heading: #1a365d;
   --anican-text-muted: #a0aec0;
 
+  /* Variables semánticas de Tablas */
+  --anican-table-th-bg: var(--anican-bg);
+  --anican-table-th-border: #cbd5e1;
+  --anican-table-td-border: var(--anican-border);
+  --anican-table-container-border: var(--anican-border);
+  --anican-table-hover-bg: var(--anican-naranja-light);
+  --anican-input-bg: #ffffff;
+  --anican-input-border: #cbd5e1;
+  --anican-input-text: var(--anican-azul-oscuro);
+  --anican-input-placeholder: #64748b;
+  --anican-input-focus-shadow: rgba(245, 139, 5, 0.2);
+
   /* Sombras */
   --anican-shadow-sm: 0 1px 3px rgba(26, 54, 93, 0.06);
   --anican-shadow-md: 0 4px 12px rgba(26, 54, 93, 0.08);
@@ -60,6 +72,18 @@
   --anican-text-muted: #7d8084;
   --anican-naranja-light: rgba(245, 139, 5, 0.15);
   --anican-amarillo-light: rgba(255, 194, 47, 0.15);
+
+  /* Variables semánticas de Tablas (Modo Oscuro) */
+  --anican-table-th-bg: rgba(255, 255, 255, 0.05);
+  --anican-table-th-border: rgba(255, 255, 255, 0.22);
+  --anican-table-td-border: rgba(255, 255, 255, 0.15);
+  --anican-table-container-border: rgba(255, 255, 255, 0.16);
+  --anican-table-hover-bg: rgba(245, 139, 5, 0.15);
+  --anican-input-bg: #141517;
+  --anican-input-border: #373a40;
+  --anican-input-text: #f8f9fa;
+  --anican-input-placeholder: #a6a7ab;
+  --anican-input-focus-shadow: rgba(245, 139, 5, 0.25);
 
   /* Sombras oscuras */
   --anican-shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
@@ -164,6 +188,154 @@ p {
 .anican-fade-in {
   animation: fadeInUp 0.3s ease-out;
 }
+
+/* =============================================
+   Estilos Estandarizados de Tablas y Tabs
+   ============================================= */
+
+.anican-table-container {
+  overflow-x: auto;
+  width: 100%;
+  border-radius: var(--mantine-radius-md, 8px);
+  border: 1px solid var(--anican-border);
+  background-color: var(--anican-bg-card);
+  transition: border-color 0.25s ease, background-color 0.25s ease;
+}
+
+/* Transiciones y respuesta táctil en filas */
+.mantine-Table-tr {
+  transition: background-color 0.15s ease, color 0.15s ease;
+  cursor: pointer;
+}
+
+/* Encabezados de tabla */
+.mantine-Table-th {
+  color: var(--anican-azul-oscuro);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background-color: var(--anican-table-th-bg);
+  border-bottom: 2px solid var(--anican-table-th-border) !important;
+  padding: 10px 14px !important;
+  white-space: nowrap;
+}
+
+/* Celdas de tabla */
+.mantine-Table-td {
+  vertical-align: middle !important;
+  padding: 12px 14px !important;
+  border-bottom: 1px solid var(--anican-table-td-border) !important;
+}
+
+.anican-table-container {
+  border: 1px solid var(--anican-table-container-border) !important;
+  border-radius: 8px;
+  overflow-x: auto;
+}
+
+/* Hover de filas */
+.mantine-Table-tbody .mantine-Table-tr:hover,
+.mantine-Table-tr[data-hovered] {
+  background-color: var(--anican-table-hover-bg) !important;
+}
+
+/* Selección de fila activa */
+.mantine-Table-tr[data-selected="true"] {
+  background-color: var(--anican-table-hover-bg) !important;
+  box-shadow: inset 3px 0 0 var(--anican-naranja) !important;
+}
+
+/* =============================================
+   Estilos de Búsqueda y Filtros Destacados
+   ============================================= */
+
+.anican-search-input .mantine-TextInput-input,
+.anican-search-input .mantine-Input-input {
+  background-color: var(--anican-input-bg) !important;
+  border: 1px solid var(--anican-input-border) !important;
+  color: var(--anican-input-text) !important;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.anican-search-input .mantine-TextInput-input::placeholder,
+.anican-search-input .mantine-Input-input::placeholder {
+  color: var(--anican-input-placeholder) !important;
+  opacity: 1 !important;
+}
+
+.anican-search-input .mantine-Input-section {
+  color: var(--anican-input-placeholder) !important;
+}
+
+.anican-search-input .mantine-TextInput-input:focus,
+.anican-search-input .mantine-Input-input:focus {
+  border-color: var(--anican-naranja) !important;
+  box-shadow: 0 0 0 3px var(--anican-input-focus-shadow) !important;
+}
+
+/* =============================================
+   Estilos de Tabs Predeterminados (Default Variant)
+   ============================================= */
+
+.mantine-Tabs-list {
+  border-bottom: 1px solid var(--anican-border);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tabs-list {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.mantine-Tabs-tab {
+  font-weight: 500;
+  color: var(--anican-text-muted);
+  font-size: 0.875rem;
+  padding: 10px 16px;
+  transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  border-bottom: 2px solid transparent;
+}
+
+.mantine-Tabs-tab:hover:not([data-active]) {
+  color: var(--anican-text-heading);
+  background-color: var(--anican-naranja-light);
+  border-radius: 6px 6px 0 0;
+}
+
+.mantine-Tabs-tab[data-active] {
+  color: var(--anican-naranja) !important;
+  border-bottom: 2px solid var(--anican-naranja) !important;
+  font-weight: 700;
+  background-color: transparent;
+}
+
+.mantine-Tabs-tab[data-active] .mantine-Tabs-tabSection {
+  color: var(--anican-naranja) !important;
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab {
+  color: var(--anican-text-muted);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab:hover:not([data-active]) {
+  color: var(--anican-text-heading);
+  background-color: rgba(245, 139, 5, 0.1);
+}
+
+[data-mantine-color-scheme="dark"] .mantine-Tabs-tab[data-active] {
+  color: var(--anican-naranja) !important;
+  border-bottom-color: var(--anican-naranja) !important;
+}
+
+
+
+
+
+
+
+
 
 /* =============================================
    Estilos de Impresión (PDF / Físico)

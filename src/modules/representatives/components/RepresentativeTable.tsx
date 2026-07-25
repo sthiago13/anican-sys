@@ -3,7 +3,9 @@ import { Table, Group, Text, Tooltip, Badge } from "@mantine/core";
 import { IconPencil, IconTrash } from "@tabler/icons-react";
 import { IconButton } from "../../../components/UI/IconButton";
 import { ConfirmModal } from "../../../components/UI/ConfirmModal";
+import { PacienteInfoModal } from "./PatientInfoModal";
 import { type Representante } from "../types";
+import { type Paciente } from "../../patients/types";
 
 export interface RepresentativeTableProps {
   representantes: Representante[];
@@ -20,10 +22,13 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
 }) => {
   const [deleteModalOpened, setDeleteModalOpened] = useState(false);
   const [selectedRepId, setSelectedRepId] = useState<string | null>(null);
+  const [selectedPacienteInfo, setSelectedPacienteInfo] =
+    useState<Paciente | null>(null);
+  const [pacienteModalOpened, setPacienteModalOpened] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const handleDeleteClick = (id: string) => {
-    setSelectedRepId(id);
+  const handleDeleteClick = (repId: string) => {
+    setSelectedRepId(repId);
     setDeleteModalOpened(true);
   };
 
@@ -77,6 +82,12 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
                   color="orange"
                   size="sm"
                   radius="sm"
+                  style={{ cursor: "pointer" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPacienteInfo(paciente as Paciente);
+                    setPacienteModalOpened(true);
+                  }}
                 >
                   {paciente.nombres} {paciente.apellidos}
                 </Badge>
@@ -89,13 +100,16 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
           )}
         </Table.Td>
         <Table.Td>
-          <Group gap={8}>
+          <Group gap={8} justify="flex-end">
             <Tooltip label="Editar Representante">
               <div>
                 <IconButton
                   icon={<IconPencil size={16} stroke={1.5} />}
                   color="blue"
-                  onClick={() => onEdit(rep)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(rep);
+                  }}
                   disabled={loading}
                 />
               </div>
@@ -111,7 +125,10 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
                 <IconButton
                   icon={<IconTrash size={16} stroke={1.5} />}
                   color="red"
-                  onClick={() => handleDeleteClick(rep.id)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(rep.id);
+                  }}
                   disabled={tienePacientes || loading}
                 />
               </div>
@@ -123,16 +140,18 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
   });
 
   return (
-    <div style={{ overflowX: "auto", width: "100%" }}>
+    <div className="anican-table-container">
       <Table striped highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th>Cédula</Table.Th>
-            <Table.Th>Nombre Completo</Table.Th>
-            <Table.Th>Teléfonos</Table.Th>
-            <Table.Th>Residencia</Table.Th>
-            <Table.Th>Pacientes Asociados</Table.Th>
-            <Table.Th>Acciones</Table.Th>
+            <Table.Th style={{ width: "15%" }}>Cédula</Table.Th>
+            <Table.Th style={{ width: "22%" }}>Nombre Completo</Table.Th>
+            <Table.Th style={{ width: "18%" }}>Teléfonos</Table.Th>
+            <Table.Th style={{ width: "18%" }}>Residencia</Table.Th>
+            <Table.Th style={{ width: "15%" }}>Pacientes Asociados</Table.Th>
+            <Table.Th style={{ width: "12%", textAlign: "right" }}>
+              Acciones
+            </Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -162,6 +181,12 @@ export const RepresentativeTable: React.FC<RepresentativeTableProps> = ({
         confirmLabel="Eliminar"
         confirmColor="red"
         loading={deleting}
+      />
+
+      <PacienteInfoModal
+        opened={pacienteModalOpened}
+        onClose={() => setPacienteModalOpened(false)}
+        paciente={selectedPacienteInfo}
       />
     </div>
   );

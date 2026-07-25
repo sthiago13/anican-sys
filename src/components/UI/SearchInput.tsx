@@ -24,12 +24,10 @@ export const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
         radius={radius}
         leftSection={<IconSearch size={16} stroke={1.5} />}
         onChange={handleChange}
+        className="anican-search-input"
         styles={{
           input: {
-            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-            '&:focus': {
-              borderColor: 'var(--mantine-color-orange-filled)',
-            },
+            transition: 'border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease',
           },
         }}
         {...props}

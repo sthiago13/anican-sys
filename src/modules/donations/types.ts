@@ -44,3 +44,16 @@ export interface DonacionEntregada {
     categoria: string;
   };
 }
+
+export interface RecibidasFilters {
+  ayuda: string;
+  fechaRango: [Date | null, Date | null];
+}
+
+export interface EntregadasFilters {
+  tipoBeneficiario: 'Todos' | 'Paciente' | 'Externo';
+  fechaRango: [Date | null, Date | null];
+  ayuda: string;
+  conSoporte: 'Todos' | 'Con Soporte' | 'Sin Soporte';
+}
+

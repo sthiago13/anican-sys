@@ -98,14 +98,14 @@ export function AyudasView() {
       </Group>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
-        <Group justify="space-between" mb="lg">
-          <Group style={{ flexGrow: 1, maxWidth: 350 }}>
+        <Group justify="space-between" mb="md" align="center">
+          <div style={{ flexGrow: 1, maxWidth: 350 }}>
             <SearchInput
               placeholder="Buscar por nombre de artículo..."
               onSearchChange={setSearchQuery}
               style={{ width: "100%" }}
             />
-          </Group>
+          </div>
           <Group>
             <Select
               placeholder="Filtrar por Categoría"
@@ -125,65 +125,73 @@ export function AyudasView() {
             <Loader color="orange" size="xl" type="bars" />
           </Center>
         ) : (
-          <Table striped highlightOnHover verticalSpacing="sm">
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Nombre del Artículo / Ayuda</Table.Th>
-                <Table.Th>Categoría</Table.Th>
-                <Table.Th style={{ width: 100, textAlign: "right" }}>Acciones</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {filteredAyudas.length === 0 ? (
+          <div className="anican-table-container">
+            <Table striped highlightOnHover verticalSpacing="sm">
+              <Table.Thead>
                 <Table.Tr>
-                  <Table.Td colSpan={3}>
-                    <Text ta="center" py="xl" c="dimmed">
-                      {searchQuery || selectedCategory !== "Todos"
-                        ? "No se encontraron artículos que coincidan con los filtros."
-                        : "No hay artículos registrados en el catálogo."}
-                    </Text>
-                  </Table.Td>
+                  <Table.Th style={{ width: "50%" }}>Nombre del Artículo / Ayuda</Table.Th>
+                  <Table.Th style={{ width: "35%" }}>Categoría</Table.Th>
+                  <Table.Th style={{ width: "15%", textAlign: "right" }}>Acciones</Table.Th>
                 </Table.Tr>
-              ) : (
-                filteredAyudas.map((a) => (
-                  <Table.Tr key={a.id}>
-                    <Table.Td>
-                      <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
-                        {a.nombre_articulo}
+              </Table.Thead>
+              <Table.Tbody>
+                {filteredAyudas.length === 0 ? (
+                  <Table.Tr>
+                    <Table.Td colSpan={3}>
+                      <Text ta="center" py="xl" c="dimmed">
+                        {searchQuery || selectedCategory !== "Todos"
+                          ? "No se encontraron artículos que coincidan con los filtros."
+                          : "No hay artículos registrados en el catálogo."}
                       </Text>
                     </Table.Td>
-                    <Table.Td>
-                      <Badge color={getCategoryBadgeColor(a.categoria)} variant="light">
-                        {a.categoria}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Group gap={4} justify="flex-end">
-                        <Tooltip label="Editar artículo" position="top" withArrow>
-                          <ActionIcon
-                            variant="subtle"
-                            color="blue"
-                            onClick={() => handleEdit(a)}
-                          >
-                            <IconEdit size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                        <Tooltip label="Eliminar artículo" position="top" withArrow>
-                          <ActionIcon
-                            variant="subtle"
-                            color="red"
-                            onClick={() => handleDeleteClick(a)}
-                          >
-                            <IconTrash size={16} />
-                          </ActionIcon>
-                        </Tooltip>
-                      </Group>
-                    </Table.Td>
                   </Table.Tr>
-                ))
-              )}
-            </Table.Tbody>
-          </Table>
+                ) : (
+                  filteredAyudas.map((a) => (
+                    <Table.Tr key={a.id}>
+                      <Table.Td>
+                        <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
+                          {a.nombre_articulo}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color={getCategoryBadgeColor(a.categoria)} variant="light">
+                          {a.categoria}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Group gap={4} justify="flex-end">
+                          <Tooltip label="Editar artículo" position="top" withArrow>
+                            <ActionIcon
+                              variant="subtle"
+                              color="blue"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEdit(a);
+                              }}
+                            >
+                              <IconEdit size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                          <Tooltip label="Eliminar artículo" position="top" withArrow>
+                            <ActionIcon
+                              variant="subtle"
+                              color="red"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(a);
+                              }}
+                            >
+                              <IconTrash size={16} />
+                            </ActionIcon>
+                          </Tooltip>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))
+                )}
+              </Table.Tbody>
+            </Table>
+          </div>
         )}
       </Card>
 
