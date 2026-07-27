@@ -16,6 +16,7 @@ import { IconAlertCircle, IconCheck, IconCoins } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { useRates } from "../../donations/hooks/useRates";
 import { useAuth } from "../../auth/hooks/useAuth";
+import { BrandingSettings } from "./BrandingSettings";
 
 export function SettingsView() {
   const { colorScheme, setColorScheme } = useMantineColorScheme();
@@ -114,6 +115,8 @@ export function SettingsView() {
           </Group>
         </Stack>
       </Card>
+
+      <BrandingSettings />
 
       <Card withBorder radius="md" p="lg" shadow="xs">
         <Stack gap="md">

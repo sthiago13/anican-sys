@@ -13,6 +13,163 @@ interface UseDonationsParams {
   filtersEntregadas?: EntregadasFilters;
 }
 
+const DONACIONES_RECIBIDAS_SELECT_FIELDS = `
+  *,
+  catalogo_ayudas (
+    nombre_articulo,
+    categoria
+  )
+`;
+
+const DONACIONES_ENTREGADAS_SELECT_FIELDS = `
+  *,
+  pacientes (
+    nombres
+  ),
+  catalogo_ayudas (
+    nombre_articulo,
+    categoria
+  )
+`;
+
+const formatLocalDate = (d: Date) => {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+async function fetchFilteredDonacionesRecibidas({
+  searchRecibidas,
+  filtersRecibidas,
+  pageRecibidas,
+  pageSize,
+  countExact = false,
+}: {
+  searchRecibidas?: string;
+  filtersRecibidas?: RecibidasFilters;
+  pageRecibidas?: number;
+  pageSize?: number;
+  countExact?: boolean;
+}) {
+  let query = supabase
+    .from("donaciones_recibidas")
+    .select(DONACIONES_RECIBIDAS_SELECT_FIELDS, countExact ? { count: "exact" } : undefined);
+
+  if (searchRecibidas?.trim()) {
+    const search = searchRecibidas.trim();
+    query = query.ilike("entidad_donante", `%${search}%`);
+  }
+
+  if (filtersRecibidas) {
+    if (filtersRecibidas.ayuda && filtersRecibidas.ayuda !== "Todos") {
+      query = query.eq("id_ayuda", filtersRecibidas.ayuda);
+    }
+
+    if (
+      filtersRecibidas.fechaRango &&
+      filtersRecibidas.fechaRango[0] &&
+      filtersRecibidas.fechaRango[1]
+    ) {
+      const start = formatLocalDate(filtersRecibidas.fechaRango[0]);
+      const end = formatLocalDate(filtersRecibidas.fechaRango[1]);
+      query = query.gte("fecha", start).lte("fecha", end);
+    }
+  }
+
+  query = query.order("fecha", { ascending: false });
+
+  if (pageRecibidas !== undefined && pageSize !== undefined) {
+    const from = (pageRecibidas - 1) * pageSize;
+    const to = pageRecibidas * pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  return await query;
+}
+
+async function fetchFilteredDonacionesEntregadas({
+  searchEntregadas,
+  filtersEntregadas,
+  pageEntregadas,
+  pageSize,
+  countExact = false,
+}: {
+  searchEntregadas?: string;
+  filtersEntregadas?: EntregadasFilters;
+  pageEntregadas?: number;
+  pageSize?: number;
+  countExact?: boolean;
+}) {
+  let query = supabase
+    .from("donaciones_entregadas")
+    .select(DONACIONES_ENTREGADAS_SELECT_FIELDS, countExact ? { count: "exact" } : undefined);
+
+  if (searchEntregadas?.trim()) {
+    const search = searchEntregadas.trim();
+
+    const { data: pacs } = await supabase
+      .from("pacientes")
+      .select("id")
+      .ilike("nombres", `%${search}%`);
+
+    const { data: ayudasData } = await supabase
+      .from("catalogo_ayudas")
+      .select("id")
+      .ilike("nombre_articulo", `%${search}%`);
+
+    const pacIds = pacs?.map((p) => p.id) || [];
+    const ayudaIds = ayudasData?.map((a) => a.id) || [];
+
+    let orConditions = `beneficiario_externo.ilike.%${search}%,observaciones.ilike.%${search}%`;
+    if (pacIds.length > 0) {
+      orConditions += `,id_paciente.in.(${pacIds.join(",")})`;
+    }
+    if (ayudaIds.length > 0) {
+      orConditions += `,id_ayuda.in.(${ayudaIds.join(",")})`;
+    }
+    query = query.or(orConditions);
+  }
+
+  if (filtersEntregadas) {
+    if (filtersEntregadas.ayuda && filtersEntregadas.ayuda !== "Todos") {
+      query = query.eq("id_ayuda", filtersEntregadas.ayuda);
+    }
+
+    if (filtersEntregadas.tipoBeneficiario === "Paciente") {
+      query = query.not("id_paciente", "is", null);
+    } else if (filtersEntregadas.tipoBeneficiario === "Externo") {
+      query = query.is("id_paciente", null);
+    }
+
+    if (filtersEntregadas.conSoporte === "Con Soporte") {
+      query = query.eq("con_soporte", true);
+    } else if (filtersEntregadas.conSoporte === "Sin Soporte") {
+      query = query.eq("con_soporte", false);
+    }
+
+    if (
+      filtersEntregadas.fechaRango &&
+      filtersEntregadas.fechaRango[0] &&
+      filtersEntregadas.fechaRango[1]
+    ) {
+      const start = formatLocalDate(filtersEntregadas.fechaRango[0]);
+      const end = formatLocalDate(filtersEntregadas.fechaRango[1]);
+      query = query.gte("fecha", start).lte("fecha", end);
+    }
+  }
+
+  query = query.order("fecha", { ascending: false });
+
+  if (pageEntregadas !== undefined && pageSize !== undefined) {
+    const from = (pageEntregadas - 1) * pageSize;
+    const to = pageEntregadas * pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  return await query;
+}
+
 export function useDonations({
   pageRecibidas,
   pageEntregadas,
@@ -76,57 +233,17 @@ export function useDonations({
     },
   });
 
-  const formatLocalDate = (d: Date) => {
-    const year = d.getFullYear();
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  };
-
   // 3. Query para Donaciones Recibidas (Paginadas y Filtradas)
   const { data: recibidasData, isLoading: loadingRecibidas } = useQuery({
     queryKey: ["donaciones_recibidas", { pageRecibidas, pageSize, searchRecibidas, filtersRecibidas }],
     queryFn: async () => {
-      let query = supabase
-        .from("donaciones_recibidas")
-        .select(
-          `
-            *,
-            catalogo_ayudas (
-              nombre_articulo,
-              categoria
-            )
-          `,
-          { count: "exact" }
-        );
-
-      if (searchRecibidas.trim()) {
-        const search = searchRecibidas.trim();
-        query = query.ilike("entidad_donante", `%${search}%`);
-      }
-
-      if (filtersRecibidas) {
-        if (filtersRecibidas.ayuda && filtersRecibidas.ayuda !== "Todos") {
-          query = query.eq("id_ayuda", filtersRecibidas.ayuda);
-        }
-
-        if (
-          filtersRecibidas.fechaRango &&
-          filtersRecibidas.fechaRango[0] &&
-          filtersRecibidas.fechaRango[1]
-        ) {
-          const start = formatLocalDate(filtersRecibidas.fechaRango[0]);
-          const end = formatLocalDate(filtersRecibidas.fechaRango[1]);
-          query = query.gte("fecha", start).lte("fecha", end);
-        }
-      }
-
-      const from = (pageRecibidas - 1) * pageSize;
-      const to = pageRecibidas * pageSize - 1;
-
-      const { data, count, error } = await query
-        .order("fecha", { ascending: false })
-        .range(from, to);
+      const { data, count, error } = await fetchFilteredDonacionesRecibidas({
+        searchRecibidas,
+        filtersRecibidas,
+        pageRecibidas,
+        pageSize,
+        countExact: true,
+      });
 
       if (error) throw error;
 
@@ -142,84 +259,13 @@ export function useDonations({
   const { data: entregadasData, isLoading: loadingEntregadas } = useQuery({
     queryKey: ["donaciones_entregadas", { pageEntregadas, pageSize, searchEntregadas, filtersEntregadas }],
     queryFn: async () => {
-      let query = supabase
-        .from("donaciones_entregadas")
-        .select(
-          `
-            *,
-            pacientes (
-              nombres
-            ),
-            catalogo_ayudas (
-              nombre_articulo,
-              categoria
-            )
-          `,
-          { count: "exact" }
-        );
-
-      if (searchEntregadas.trim()) {
-        const search = searchEntregadas.trim();
-
-        // Buscar pacientes cuyo nombre coincida
-        const { data: pacs } = await supabase
-          .from("pacientes")
-          .select("id")
-          .ilike("nombres", `%${search}%`);
-
-        // Buscar artículos coincidentes
-        const { data: ayudasData } = await supabase
-          .from("catalogo_ayudas")
-          .select("id")
-          .ilike("nombre_articulo", `%${search}%`);
-
-        const pacIds = pacs?.map((p) => p.id) || [];
-        const ayudaIds = ayudasData?.map((a) => a.id) || [];
-
-        let orConditions = `beneficiario_externo.ilike.%${search}%,observaciones.ilike.%${search}%`;
-        if (pacIds.length > 0) {
-          orConditions += `,id_paciente.in.(${pacIds.join(",")})`;
-        }
-        if (ayudaIds.length > 0) {
-          orConditions += `,id_ayuda.in.(${ayudaIds.join(",")})`;
-        }
-        query = query.or(orConditions);
-      }
-
-      if (filtersEntregadas) {
-        if (filtersEntregadas.ayuda && filtersEntregadas.ayuda !== "Todos") {
-          query = query.eq("id_ayuda", filtersEntregadas.ayuda);
-        }
-
-        if (filtersEntregadas.tipoBeneficiario === "Paciente") {
-          query = query.not("id_paciente", "is", null);
-        } else if (filtersEntregadas.tipoBeneficiario === "Externo") {
-          query = query.is("id_paciente", null);
-        }
-
-        if (filtersEntregadas.conSoporte === "Con Soporte") {
-          query = query.eq("con_soporte", true);
-        } else if (filtersEntregadas.conSoporte === "Sin Soporte") {
-          query = query.eq("con_soporte", false);
-        }
-
-        if (
-          filtersEntregadas.fechaRango &&
-          filtersEntregadas.fechaRango[0] &&
-          filtersEntregadas.fechaRango[1]
-        ) {
-          const start = formatLocalDate(filtersEntregadas.fechaRango[0]);
-          const end = formatLocalDate(filtersEntregadas.fechaRango[1]);
-          query = query.gte("fecha", start).lte("fecha", end);
-        }
-      }
-
-      const from = (pageEntregadas - 1) * pageSize;
-      const to = pageEntregadas * pageSize - 1;
-
-      const { data, count, error } = await query
-        .order("fecha", { ascending: false })
-        .range(from, to);
+      const { data, count, error } = await fetchFilteredDonacionesEntregadas({
+        searchEntregadas,
+        filtersEntregadas,
+        pageEntregadas,
+        pageSize,
+        countExact: true,
+      });
 
       if (error) throw error;
 
@@ -361,116 +407,22 @@ export function useDonations({
 
   // Obtener donaciones recibidas filtradas sin paginación
   const fetchExportRecibidas = async (): Promise<DonacionRecibida[]> => {
-    let query = supabase
-      .from("donaciones_recibidas")
-      .select(
-        `
-          *,
-          catalogo_ayudas (
-            nombre_articulo,
-            categoria
-          )
-        `
-      );
+    const { data, error } = await fetchFilteredDonacionesRecibidas({
+      searchRecibidas,
+      filtersRecibidas,
+    });
 
-    if (searchRecibidas.trim()) {
-      const search = searchRecibidas.trim();
-      query = query.ilike("entidad_donante", `%${search}%`);
-    }
-
-    if (filtersRecibidas) {
-      if (filtersRecibidas.ayuda && filtersRecibidas.ayuda !== "Todos") {
-        query = query.eq("id_ayuda", filtersRecibidas.ayuda);
-      }
-
-      if (
-        filtersRecibidas.fechaRango &&
-        filtersRecibidas.fechaRango[0] &&
-        filtersRecibidas.fechaRango[1]
-      ) {
-        const start = formatLocalDate(filtersRecibidas.fechaRango[0]);
-        const end = formatLocalDate(filtersRecibidas.fechaRango[1]);
-        query = query.gte("fecha", start).lte("fecha", end);
-      }
-    }
-
-    const { data, error } = await query.order("fecha", { ascending: false });
     if (error) throw error;
     return (data || []) as DonacionRecibida[];
   };
 
   // Obtener donaciones entregadas filtradas sin paginación
   const fetchExportEntregadas = async (): Promise<DonacionEntregada[]> => {
-    let query = supabase
-      .from("donaciones_entregadas")
-      .select(
-        `
-          *,
-          pacientes (
-            nombres
-          ),
-          catalogo_ayudas (
-            nombre_articulo,
-            categoria
-          )
-        `
-      );
+    const { data, error } = await fetchFilteredDonacionesEntregadas({
+      searchEntregadas,
+      filtersEntregadas,
+    });
 
-    if (searchEntregadas.trim()) {
-      const search = searchEntregadas.trim();
-
-      const { data: pacs } = await supabase
-        .from("pacientes")
-        .select("id")
-        .ilike("nombres", `%${search}%`);
-
-      const { data: ayudasData } = await supabase
-        .from("catalogo_ayudas")
-        .select("id")
-        .ilike("nombre_articulo", `%${search}%`);
-
-      const pacIds = pacs?.map((p) => p.id) || [];
-      const ayudaIds = ayudasData?.map((a) => a.id) || [];
-
-      let orConditions = `beneficiario_externo.ilike.%${search}%,observaciones.ilike.%${search}%`;
-      if (pacIds.length > 0) {
-        orConditions += `,id_paciente.in.(${pacIds.join(",")})`;
-      }
-      if (ayudaIds.length > 0) {
-        orConditions += `,id_ayuda.in.(${ayudaIds.join(",")})`;
-      }
-      query = query.or(orConditions);
-    }
-
-    if (filtersEntregadas) {
-      if (filtersEntregadas.ayuda && filtersEntregadas.ayuda !== "Todos") {
-        query = query.eq("id_ayuda", filtersEntregadas.ayuda);
-      }
-
-      if (filtersEntregadas.tipoBeneficiario === "Paciente") {
-        query = query.not("id_paciente", "is", null);
-      } else if (filtersEntregadas.tipoBeneficiario === "Externo") {
-        query = query.is("id_paciente", null);
-      }
-
-      if (filtersEntregadas.conSoporte === "Con Soporte") {
-        query = query.eq("con_soporte", true);
-      } else if (filtersEntregadas.conSoporte === "Sin Soporte") {
-        query = query.eq("con_soporte", false);
-      }
-
-      if (
-        filtersEntregadas.fechaRango &&
-        filtersEntregadas.fechaRango[0] &&
-        filtersEntregadas.fechaRango[1]
-      ) {
-        const start = formatLocalDate(filtersEntregadas.fechaRango[0]);
-        const end = formatLocalDate(filtersEntregadas.fechaRango[1]);
-        query = query.gte("fecha", start).lte("fecha", end);
-      }
-    }
-
-    const { data, error } = await query.order("fecha", { ascending: false });
     if (error) throw error;
     return (data || []) as unknown as DonacionEntregada[];
   };

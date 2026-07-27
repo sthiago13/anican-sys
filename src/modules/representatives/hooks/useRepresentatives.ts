@@ -30,6 +30,115 @@ interface DbRepresentante {
   pacientes: DbPacienteJoined | DbPacienteJoined[] | null;
 }
 
+const REPRESENTATIVES_SELECT_FIELDS = `
+  id,
+  cedula,
+  nombres,
+  telefono_1,
+  telefono_2,
+  residencia,
+  created_at,
+  pacientes (
+    id,
+    nombres,
+    apellidos,
+    fecha_nacimiento,
+    sexo,
+    estado,
+    diagnosticos (
+      nombre
+    )
+  )
+`;
+
+function mapDbRepresentanteToRepresentante(rep: DbRepresentante): Representante {
+  const pacientesRaw = Array.isArray(rep.pacientes)
+    ? rep.pacientes
+    : rep.pacientes
+    ? [rep.pacientes]
+    : [];
+
+  return {
+    id: rep.id,
+    cedula: rep.cedula,
+    nombres: rep.nombres,
+    telefono_1: rep.telefono_1 || undefined,
+    telefono_2: rep.telefono_2 || undefined,
+    residencia: rep.residencia || undefined,
+    created_at: rep.created_at,
+    pacientes: pacientesRaw.map((p) => {
+      const diagJoined = Array.isArray(p.diagnosticos)
+        ? p.diagnosticos[0]
+        : p.diagnosticos;
+
+      return {
+        id: p.id,
+        nombres: p.nombres,
+        apellidos: p.apellidos,
+        fecha_nacimiento: p.fecha_nacimiento,
+        sexo: p.sexo,
+        estado: p.estado,
+        diagnostico_nombre: diagJoined?.nombre || "No especificado",
+        representante_nombre: rep.nombres,
+      };
+    }),
+  };
+}
+
+async function fetchFilteredRepresentatives({
+  filters,
+  searchQuery,
+  page,
+  pageSize,
+  countExact = false,
+}: {
+  filters?: RepresentativeFilters;
+  searchQuery?: string;
+  page?: number;
+  pageSize?: number;
+  countExact?: boolean;
+}) {
+  let query = supabase
+    .from("representantes")
+    .select(REPRESENTATIVES_SELECT_FIELDS, countExact ? { count: "exact" } : undefined);
+
+  if (searchQuery?.trim()) {
+    const search = searchQuery.trim();
+    query = query.or(`cedula.ilike.%${search}%,nombres.ilike.%${search}%`);
+  }
+
+  if (filters?.asociacion && filters.asociacion !== "Todos") {
+    const { data: pacientesConRep } = await supabase
+      .from("pacientes")
+      .select("id_representante")
+      .not("id_representante", "is", null);
+
+    const idsConRep = Array.from(new Set(pacientesConRep?.map((p) => p.id_representante) || []));
+
+    if (filters.asociacion === "Con Pacientes") {
+      if (idsConRep.length > 0) {
+        query = query.in("id", idsConRep);
+      } else {
+        query = query.eq("id", "00000000-0000-0000-0000-000000000000");
+      }
+    } else if (filters.asociacion === "Sin Pacientes") {
+      if (idsConRep.length > 0) {
+        query = query.not("id", "in", `(${idsConRep.join(",")})`);
+      }
+    }
+  }
+
+  query = query.order("nombres", { ascending: true });
+
+  if (page !== undefined && pageSize !== undefined) {
+    const from = (page - 1) * pageSize;
+    const to = page * pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  return await query;
+}
+
 export function useRepresentatives({
   page,
   pageSize,
@@ -42,104 +151,19 @@ export function useRepresentatives({
   const { data, isLoading: loadingReps } = useQuery({
     queryKey: ["representantes", { page, pageSize, searchQuery, filters }],
     queryFn: async () => {
-      let query = supabase
-        .from("representantes")
-        .select(
-          `
-            id,
-            cedula,
-            nombres,
-            telefono_1,
-            telefono_2,
-            residencia,
-            created_at,
-            pacientes (
-              id,
-              nombres,
-              apellidos,
-              fecha_nacimiento,
-              sexo,
-              estado,
-              diagnosticos (
-                nombre
-              )
-            )
-          `,
-          { count: "exact" }
-        );
-
-      if (searchQuery.trim()) {
-        const search = searchQuery.trim();
-        query = query.or(`cedula.ilike.%${search}%,nombres.ilike.%${search}%`);
-      }
-
-      if (filters?.asociacion && filters.asociacion !== "Todos") {
-        // Consultar ids de representantes que tienen al menos un paciente
-        const { data: pacientesConRep } = await supabase
-          .from("pacientes")
-          .select("id_representante")
-          .not("id_representante", "is", null);
-
-        const idsConRep = Array.from(new Set(pacientesConRep?.map((p) => p.id_representante) || []));
-
-        if (filters.asociacion === "Con Pacientes") {
-          if (idsConRep.length > 0) {
-            query = query.in("id", idsConRep);
-          } else {
-            // Ningún representante tiene pacientes, devolvemos consulta vacía para simular 0 resultados
-            query = query.eq("id", "00000000-0000-0000-0000-000000000000");
-          }
-        } else if (filters.asociacion === "Sin Pacientes") {
-          if (idsConRep.length > 0) {
-            query = query.not("id", "in", `(${idsConRep.join(",")})`);
-          }
-        }
-      }
-
-      const from = (page - 1) * pageSize;
-      const to = page * pageSize - 1;
-
-      const { data: rawReps, count, error } = await query
-        .order("nombres", { ascending: true })
-        .range(from, to);
+      const { data: rawReps, count, error } = await fetchFilteredRepresentatives({
+        filters,
+        searchQuery,
+        page,
+        pageSize,
+        countExact: true,
+      });
 
       if (error) throw error;
 
       const mappedData: Representante[] = (
         (rawReps as unknown as DbRepresentante[]) || []
-      ).map((rep) => {
-        const pacientesRaw = Array.isArray(rep.pacientes)
-          ? rep.pacientes
-          : rep.pacientes
-          ? [rep.pacientes]
-          : [];
-
-        return {
-          id: rep.id,
-          cedula: rep.cedula,
-          nombres: rep.nombres,
-          telefono_1: rep.telefono_1 || undefined,
-          telefono_2: rep.telefono_2 || undefined,
-          residencia: rep.residencia || undefined,
-          created_at: rep.created_at,
-          pacientes: pacientesRaw.map((p) => {
-            const diagJoined = Array.isArray(p.diagnosticos)
-              ? p.diagnosticos[0]
-              : p.diagnosticos;
-
-            return {
-              id: p.id,
-              nombres: p.nombres,
-              apellidos: p.apellidos,
-              fecha_nacimiento: p.fecha_nacimiento,
-              sexo: p.sexo,
-              estado: p.estado,
-              diagnostico_nombre: diagJoined?.nombre || "No especificado",
-              representante_nombre: rep.nombres,
-            };
-          }),
-        };
-      });
+      ).map(mapDbRepresentanteToRepresentante);
 
       return {
         representantes: mappedData,
@@ -254,93 +278,14 @@ export function useRepresentatives({
 
   // Función para obtener TODOS los representantes filtrados sin paginación (para exportación)
   const fetchExportData = async (): Promise<Representante[]> => {
-    let query = supabase
-      .from("representantes")
-      .select(
-        `
-          id,
-          cedula,
-          nombres,
-          telefono_1,
-          telefono_2,
-          residencia,
-          created_at,
-          pacientes (
-            id,
-            nombres,
-            apellidos,
-            fecha_nacimiento,
-            sexo,
-            estado,
-            diagnosticos (
-              nombre
-            )
-          )
-        `
-      );
+    const { data: rawReps, error } = await fetchFilteredRepresentatives({
+      filters,
+      searchQuery,
+    });
 
-    if (searchQuery.trim()) {
-      const search = searchQuery.trim();
-      query = query.or(`cedula.ilike.%${search}%,nombres.ilike.%${search}%`);
-    }
-
-    if (filters?.asociacion && filters.asociacion !== "Todos") {
-      const { data: pacientesConRep } = await supabase
-        .from("pacientes")
-        .select("id_representante")
-        .not("id_representante", "is", null);
-
-      const idsConRep = Array.from(new Set(pacientesConRep?.map((p) => p.id_representante) || []));
-
-      if (filters.asociacion === "Con Pacientes") {
-        if (idsConRep.length > 0) {
-          query = query.in("id", idsConRep);
-        } else {
-          query = query.eq("id", "00000000-0000-0000-0000-000000000000");
-        }
-      } else if (filters.asociacion === "Sin Pacientes") {
-        if (idsConRep.length > 0) {
-          query = query.not("id", "in", `(${idsConRep.join(",")})`);
-        }
-      }
-    }
-
-    const { data: rawReps, error } = await query.order("nombres", { ascending: true });
     if (error) throw error;
 
-    return ((rawReps as unknown as DbRepresentante[]) || []).map((rep) => {
-      const pacientesRaw = Array.isArray(rep.pacientes)
-        ? rep.pacientes
-        : rep.pacientes
-        ? [rep.pacientes]
-        : [];
-
-      return {
-        id: rep.id,
-        cedula: rep.cedula,
-        nombres: rep.nombres,
-        telefono_1: rep.telefono_1 || undefined,
-        telefono_2: rep.telefono_2 || undefined,
-        residencia: rep.residencia || undefined,
-        created_at: rep.created_at,
-        pacientes: pacientesRaw.map((p) => {
-          const diagJoined = Array.isArray(p.diagnosticos)
-            ? p.diagnosticos[0]
-            : p.diagnosticos;
-
-          return {
-            id: p.id,
-            nombres: p.nombres,
-            apellidos: p.apellidos,
-            fecha_nacimiento: p.fecha_nacimiento,
-            sexo: p.sexo,
-            estado: p.estado,
-            diagnostico_nombre: diagJoined?.nombre || "No especificado",
-            representante_nombre: rep.nombres,
-          };
-        }),
-      };
-    });
+    return ((rawReps as unknown as DbRepresentante[]) || []).map(mapDbRepresentanteToRepresentante);
   };
 
   const representantes = data?.representantes || [];

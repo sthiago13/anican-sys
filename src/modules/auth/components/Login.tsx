@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Paper,
   TextInput,
@@ -6,19 +6,18 @@ import {
   Title,
   Text,
   Button,
-  Overlay,
   Flex,
   Box,
   Stack,
   Group,
   Alert,
-} from '@mantine/core';
-import { IconLock, IconMail, IconAlertCircle } from '@tabler/icons-react';
-import { useNavigate } from 'react-router-dom';
-import loginHero from '../../../assets/login_hero.png';
-import { supabase } from '../../../config/supabase';
+} from "@mantine/core";
+import { IconLock, IconMail, IconAlertCircle } from "@tabler/icons-react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "../../../config/supabase";
+import { useBranding } from "../../settings/hooks/useBranding";
 
-const GoldRibbonIcon = ({ size = 28 }: { size?: number }) => (
+const GoldRibbonIcon = ({ size = 32 }: { size?: number }) => (
   <svg
     viewBox="0 0 24 24"
     width={size}
@@ -28,7 +27,7 @@ const GoldRibbonIcon = ({ size = 28 }: { size?: number }) => (
   >
     <path
       d="M12 2C9.5 2 7.5 4 7.5 6.5C7.5 9 10 12.5 12 16M12 2C14.5 2 16.5 4 16.5 6.5C16.5 9 14 12.5 12 16M12 16C11.5 17 9 21.5 6 22M12 16C12.5 17 15 21.5 18 22"
-      stroke="#ffc22f"
+      stroke="var(--anican-amarillo)"
       strokeWidth="2.5"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -38,8 +37,9 @@ const GoldRibbonIcon = ({ size = 28 }: { size?: number }) => (
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { branding } = useBranding();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -48,7 +48,7 @@ export const Login: React.FC = () => {
     setError(null);
 
     if (!email.trim() || !password.trim()) {
-      setError('Por favor, ingresa tus credenciales.');
+      setError("Por favor, ingresa tus credenciales.");
       return;
     }
 
@@ -61,13 +61,16 @@ export const Login: React.FC = () => {
       });
 
       if (authError) {
-        setError(authError.message || 'Error al iniciar sesión. Verifica tus credenciales.');
+        setError(
+          authError.message ||
+            "Error al iniciar sesión. Verifica tus credenciales.",
+        );
         return;
       }
 
-      navigate('/');
+      navigate("/");
     } catch (err) {
-      setError('Ocurrió un error inesperado al conectar con el servidor.');
+      setError("Ocurrió un error inesperado al conectar con el servidor.");
     } finally {
       setLoading(false);
     }
@@ -76,45 +79,74 @@ export const Login: React.FC = () => {
   return (
     <Box
       style={{
-        display: 'flex',
-        minHeight: '100vh',
-        width: '100vw',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f1f3f5',
+        display: "flex",
+        minHeight: "100vh",
+        width: "100vw",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "var(--anican-bg)",
         padding: 20,
       }}
     >
       <Flex
-        direction={{ base: 'column', md: 'row' }}
+        direction={{ base: "column", md: "row" }}
         style={{
-          width: '100%',
+          width: "100%",
           maxWidth: 960,
-          minHeight: 560,
+          minHeight: 540,
           borderRadius: 16,
-          overflow: 'hidden',
+          overflow: "hidden",
+          boxShadow: "var(--anican-shadow-lg)",
+          border: "1px solid var(--anican-border)",
         }}
       >
+        {/* Formulario de Login */}
         <Paper
-          shadow="xl"
           p={{ base: 32, sm: 48 }}
           style={{
             flex: 1,
-            backgroundColor: '#ffffff',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            borderTopLeftRadius: 16,
-            borderBottomLeftRadius: 16,
-            borderTopRightRadius: 0,
-            borderBottomRightRadius: 0,
+            backgroundColor: "var(--anican-bg-card)",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
           }}
         >
           <Stack gap="lg">
-            <Group gap="xs" align="center">
-              <GoldRibbonIcon size={32} />
+            <Group gap="sm" align="center">
+              {branding.logo_url ? (
+                <Box
+                  style={{
+                    width: 44,
+                    height: 44,
+                    background: "transparent",
+                    borderRadius: 10,
+                    overflow: "hidden",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <img
+                    src={branding.logo_url}
+                    alt={branding.nombre_fundacion}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                    }}
+                  />
+                </Box>
+              ) : (
+                <GoldRibbonIcon size={36} />
+              )}
               <Box>
-                <Text size="xs" fw={700} c="#ffc22f" tt="uppercase" style={{ letterSpacing: '0.05em' }}>
+                <Text
+                  size="xs"
+                  fw={800}
+                  c="var(--anican-naranja)"
+                  tt="uppercase"
+                  style={{ letterSpacing: "0.06em" }}
+                >
                   Cáncer Infantil
                 </Text>
                 <Text size="xs" c="dimmed" fw={500}>
@@ -127,24 +159,25 @@ export const Login: React.FC = () => {
               <Title
                 order={2}
                 style={{
-                  fontFamily: 'Plus Jakarta Sans, sans-serif',
+                  fontFamily: "var(--font-sans)",
                   fontWeight: 800,
-                  fontSize: 28,
+                  fontSize: 26,
                   letterSpacing: -0.5,
-                  color: '#2D0C57',
+                  color: "var(--anican-azul-oscuro)",
                 }}
               >
                 Iniciar sesión
               </Title>
               <Text size="sm" c="dimmed" mt={4}>
-                Ingresa al sistema de gestión de la fundación Anican.
+                Ingresa al sistema de gestión de{" "}
+                {branding.nombre_fundacion || "Fundación Anican"}.
               </Text>
             </div>
 
             {error && (
               <Alert
                 icon={<IconAlertCircle size={16} />}
-                title="Error"
+                title="Error de acceso"
                 color="red"
                 variant="light"
               >
@@ -162,7 +195,11 @@ export const Login: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   styles={{
-                    label: { fontWeight: 600, marginBottom: 4, color: '#2D0C57' },
+                    label: {
+                      fontWeight: 600,
+                      marginBottom: 4,
+                      color: "var(--anican-azul-oscuro)",
+                    },
                     input: { borderRadius: 8 },
                   }}
                 />
@@ -175,7 +212,11 @@ export const Login: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   styles={{
-                    label: { fontWeight: 600, marginBottom: 4, color: '#2D0C57' },
+                    label: {
+                      fontWeight: 600,
+                      marginBottom: 4,
+                      color: "var(--anican-azul-oscuro)",
+                    },
                     input: { borderRadius: 8 },
                   }}
                 />
@@ -184,81 +225,115 @@ export const Login: React.FC = () => {
                   type="submit"
                   loading={loading}
                   style={{
-                    backgroundColor: '#f58b05',
+                    backgroundColor: "var(--anican-naranja)",
                     height: 48,
                     borderRadius: 10,
                     fontSize: 16,
                     fontWeight: 600,
                     marginTop: 10,
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 12px rgba(245, 139, 5, 0.2)',
+                    transition: "all 0.2s ease",
+                    boxShadow: "0 4px 14px var(--anican-naranja-light)",
                   }}
                 >
-                  Entrar
+                  Entrar al Panel
                 </Button>
               </Stack>
             </form>
           </Stack>
         </Paper>
 
+        {/* Hero Banner Corporativo / Branding Institucional */}
         <Paper
-          shadow="xl"
           radius={0}
           style={{
             flex: 1,
-            position: 'relative',
-            backgroundImage: `url(${loginHero})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
+            position: "relative",
+            background:
+              "linear-gradient(135deg, var(--anican-azul-oscuro) 0%, var(--anican-azul-medio) 100%)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
             padding: 40,
-            minHeight: 260,
+            minHeight: 280,
+            color: "#ffffff",
           }}
         >
-          <Overlay color="#000000" opacity={0.4} zIndex={1} />
           <Stack
-            gap="xs"
+            gap="md"
             align="center"
-            style={{
-              zIndex: 2,
-              textAlign: 'center',
-            }}
+            style={{ textAlign: "center", maxWidth: 360 }}
           >
-            <Title
-              order={1}
-              style={{
-                fontFamily: 'Plus Jakarta Sans, sans-serif',
-                fontWeight: 900,
-                fontSize: 64,
-                letterSpacing: -1.5,
-                color: '#7fbbdd',
-                textShadow: '0 4px 16px rgba(0,0,0,0.3)',
-              }}
-            >
-              Anican
-            </Title>
+            {branding.logo_url ? (
+              <Box
+                style={{
+                  width: 144,
+                  height: 144,
+                  padding: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <img
+                  src={branding.logo_url}
+                  alt={branding.nombre_fundacion}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: "100%",
+                    objectFit: "contain",
+                  }}
+                />
+              </Box>
+            ) : (
+              <GoldRibbonIcon size={64} />
+            )}
+
+            <div>
+              <Title
+                order={1}
+                style={{
+                  fontFamily: "var(--font-sans)",
+                  fontWeight: 900,
+                  fontSize: 34,
+                  letterSpacing: -1,
+                  color: "#ffffff",
+                }}
+              >
+                {branding.nombre_fundacion || "Fundación Anican"}
+              </Title>
+              {branding.rif && (
+                <Text
+                  size="xs"
+                  style={{ color: "var(--anican-azul-claro)", opacity: 0.9 }}
+                  fw={600}
+                  mt={2}
+                >
+                  R.I.F. {branding.rif}
+                </Text>
+              )}
+            </div>
+
             <Text
-              size="md"
-              fw={600}
-              c="#ffffff"
+              size="sm"
+              fw={500}
               style={{
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-                textShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                color: "rgba(255, 255, 255, 0.85)",
+                lineHeight: 1.5,
               }}
             >
-              Apoyo y Esperanza
+              Sistema integral de gestión de pacientes oncopedímetricos,
+              representantes y donaciones.
             </Text>
+
             <Box
               style={{
-                width: 40,
+                width: 48,
                 height: 4,
-                backgroundColor: '#ffc22f',
+                backgroundColor: "var(--anican-amarillo)",
                 borderRadius: 2,
-                marginTop: 8,
+                marginTop: 4,
               }}
             />
           </Stack>

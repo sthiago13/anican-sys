@@ -67,11 +67,29 @@ export const ReportsView: React.FC = () => {
     setTempFechaFin(fechaFin);
   }
 
-  // Función para exportar a Excel consolidando múltiples reportes en pestañas
+  // Función para exportar a Excel consolidando múltiples reportes en pestañas estructuradas
   const handleExportExcel = () => {
-    if (financialsChartData.length === 0 && categoriesChartData.length === 0) return;
+    if (financialsChartData.length === 0 && categoriesChartData.length === 0 && diagnosticsDemographics.length === 0) return;
 
     const wb = utils.book_new();
+
+    const autoFitColumns = (aoa: any[][]) => {
+      if (aoa.length === 0) return [];
+      const colCount = Math.max(...aoa.map((row) => row.length));
+      const widths: { wch: number }[] = [];
+      for (let c = 0; c < colCount; c++) {
+        let maxLen = 12;
+        aoa.forEach((row) => {
+          const val = row[c];
+          if (val !== undefined && val !== null) {
+            const str = String(val);
+            if (str.length > maxLen) maxLen = str.length;
+          }
+        });
+        widths.push({ wch: Math.min(maxLen + 4, 55) });
+      }
+      return widths;
+    };
 
     // Hoja 1: Resumen Ejecutivo
     const resumenData = [
@@ -81,19 +99,21 @@ export const ReportsView: React.FC = () => {
       ["Fecha de Generación:", dayjs().format("DD/MM/YYYY hh:mm A")],
       ["", ""],
       ["Métrica", "Valor"],
-      ["Donaciones Recibidas (Ingresos)", `$ ${summary.totalIngresosUsd.toLocaleString("es-ES", { minimumFractionDigits: 2 })}`],
-      ["Ayudas Entregadas (Inversión)", `$ ${summary.totalEgresosUsd.toLocaleString("es-ES", { minimumFractionDigits: 2 })}`],
-      ["Balance Neto", `$ ${summary.balanceNetoUsd.toLocaleString("es-ES", { minimumFractionDigits: 2 })}`],
+      ["Donaciones Recibidas (Ingresos)", `$ ${summary.totalIngresosUsd.toLocaleString("es-ES", { minimumFractionDigits: 2 })} USD`],
+      ["Ayudas Entregadas (Inversión)", `$ ${summary.totalEgresosUsd.toLocaleString("es-ES", { minimumFractionDigits: 2 })} USD`],
+      ["Balance Neto", `$ ${summary.balanceNetoUsd.toLocaleString("es-ES", { minimumFractionDigits: 2 })} USD`],
       ["Niños Beneficiados (Periodo)", summary.pacientesUnicosBeneficiados],
-      ["Volumen de Ayudas Otorgadas", `${summary.ayudasTotalesEntregadas} unidades`]
+      ["Volumen de Ayudas Otorgadas", `${summary.ayudasTotalesEntregadas} unidades`],
+      ["Total Pacientes Activos", pacientesTotales]
     ];
     const wsResumen = utils.aoa_to_sheet(resumenData);
-    utils.book_append_sheet(wb, wsResumen, "Resumen");
+    wsResumen["!cols"] = autoFitColumns(resumenData);
+    utils.book_append_sheet(wb, wsResumen, "Resumen Ejecutivo");
 
     // Hoja 2: Finanzas Históricas
     if (financialsChartData.length > 0) {
       const finData = [
-        ["Periodo", "Ingresos (USD)", "Egresos (USD)", "Balance (USD)"],
+        ["Periodo", "Ingresos (USD)", "Egresos (USD)", "Balance Neto (USD)"],
         ...financialsChartData.map((item) => [
           item.periodo,
           item.ingresos,
@@ -102,6 +122,7 @@ export const ReportsView: React.FC = () => {
         ]),
       ];
       const wsFin = utils.aoa_to_sheet(finData);
+      wsFin["!cols"] = autoFitColumns(finData);
       utils.book_append_sheet(wb, wsFin, "Historial Financiero");
     }
 
@@ -116,10 +137,44 @@ export const ReportsView: React.FC = () => {
         }),
       ];
       const wsCat = utils.aoa_to_sheet(catData);
+      wsCat["!cols"] = autoFitColumns(catData);
       utils.book_append_sheet(wb, wsCat, "Distribución de Ayudas");
     }
 
-    // Descargar el libro .xlsx
+    // Hoja 4: Demografía por Diagnóstico
+    if (diagnosticsDemographics.length > 0) {
+      const totalDiag = diagnosticsDemographics.reduce((sum, d) => sum + d.cantidad, 0);
+      const diagData = [
+        ["Diagnóstico Oncopedíatrico", "Pacientes Activos (Niños)", "Porcentaje (%)"],
+        ...diagnosticsDemographics.map((item) => {
+          const pct = totalDiag > 0 ? Number(((item.cantidad / totalDiag) * 100).toFixed(2)) : 0;
+          return [item.label, item.cantidad, pct];
+        }),
+      ];
+      const wsDiag = utils.aoa_to_sheet(diagData);
+      wsDiag["!cols"] = autoFitColumns(diagData);
+      utils.book_append_sheet(wb, wsDiag, "Demografía - Diagnósticos");
+    }
+
+    // Hoja 5: Demografía por Edad y Sexo
+    if (ageDemographics.length > 0 || sexDemographics.length > 0) {
+      const totalSex = sexDemographics.reduce((sum, s) => sum + s.cantidad, 0);
+      const demoEdadSexoData = [
+        ["RANGO DE EDAD", "CANTIDAD DE NIÑOS"],
+        ...ageDemographics.map((item) => [item.label, item.cantidad]),
+        ["", ""],
+        ["DISTRIBUCIÓN POR SEXO", "CANTIDAD", "PORCENTAJE (%)"],
+        ...sexDemographics.map((item) => {
+          const pct = totalSex > 0 ? Number(((item.cantidad / totalSex) * 100).toFixed(2)) : 0;
+          return [item.label, item.cantidad, pct];
+        }),
+      ];
+      const wsDemo = utils.aoa_to_sheet(demoEdadSexoData);
+      wsDemo["!cols"] = autoFitColumns(demoEdadSexoData);
+      utils.book_append_sheet(wb, wsDemo, "Demografía - Edad y Sexo");
+    }
+
+    // Descargar el libro .xlsx consolidado
     writeFile(wb, `reporte_gestion_anican_${dayjs().format("YYYY-MM-DD")}.xlsx`);
   };
 

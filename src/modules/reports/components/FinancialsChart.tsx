@@ -4,12 +4,12 @@ import {
   Title,
   Text,
   Group,
-  Select,
-  SegmentedControl,
   Stack,
 } from "@mantine/core";
 import { AreaChart } from "@mantine/charts";
 import { IconFilter, IconTrendingUp } from "@tabler/icons-react";
+import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
+import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
 import {
   type DonacionRecibida,
   type DonacionEntregada,
@@ -21,12 +21,16 @@ interface FinancialsChartProps {
   entregadas: DonacionEntregada[];
 }
 
+const initialFilters = {
+  category: "Todas",
+  viewMode: "ambos",
+};
+
 export const FinancialsChart: React.FC<FinancialsChartProps> = ({
   recibidas,
   entregadas,
 }) => {
-  const [selectedCategory, setSelectedCategory] = useState<string>("Todas");
-  const [viewMode, setViewMode] = useState<string>("ambos");
+  const [filters, setFilters] = useState(initialFilters);
 
   // Obtener lista única de categorías disponibles
   const categoryOptions = useMemo(() => {
@@ -49,6 +53,30 @@ export const FinancialsChart: React.FC<FinancialsChartProps> = ({
     ];
   }, [entregadas, recibidas]);
 
+  const filterConfigs: FilterConfig[] = useMemo(
+    () => [
+      {
+        key: "category",
+        label: "Categoría",
+        type: "select",
+        icon: <IconFilter size={16} />,
+        options: categoryOptions,
+      },
+      {
+        key: "viewMode",
+        label: "Movimiento",
+        type: "select",
+        icon: <IconTrendingUp size={16} />,
+        options: [
+          { value: "ambos", label: "Ambos" },
+          { value: "ingresos", label: "Solo Ingresos" },
+          { value: "egresos", label: "Solo Egresos" },
+        ],
+      },
+    ],
+    [categoryOptions]
+  );
+
   // Filtrar y agrupar mensualmente los datos
   const chartData = useMemo(() => {
     const dataMap: Record<string, { ingresos: number; egresos: number }> = {};
@@ -57,8 +85,8 @@ export const FinancialsChart: React.FC<FinancialsChartProps> = ({
     recibidas.forEach((item) => {
       if (!item.fecha) return;
       if (
-        selectedCategory !== "Todas" &&
-        item.catalogo_ayudas?.categoria !== selectedCategory
+        filters.category !== "Todas" &&
+        item.catalogo_ayudas?.categoria !== filters.category
       ) {
         return;
       }
@@ -73,8 +101,8 @@ export const FinancialsChart: React.FC<FinancialsChartProps> = ({
     entregadas.forEach((item) => {
       if (!item.fecha) return;
       if (
-        selectedCategory !== "Todas" &&
-        item.catalogo_ayudas?.categoria !== selectedCategory
+        filters.category !== "Todas" &&
+        item.catalogo_ayudas?.categoria !== filters.category
       ) {
         return;
       }
@@ -95,18 +123,18 @@ export const FinancialsChart: React.FC<FinancialsChartProps> = ({
           egresos: Number(dataMap[key].egresos.toFixed(2)),
         };
       });
-  }, [recibidas, entregadas, selectedCategory]);
+  }, [recibidas, entregadas, filters.category]);
 
   const hasData = chartData.length > 0;
 
   // Determinar series a mostrar según el enfoque
   const seriesToDisplay = useMemo(() => {
-    if (viewMode === "egresos") {
+    if (filters.viewMode === "egresos") {
       return [
         { name: "egresos", color: "orange.6", label: "Ayudas Entregadas" },
       ];
     }
-    if (viewMode === "ingresos") {
+    if (filters.viewMode === "ingresos") {
       return [
         { name: "ingresos", color: "teal.6", label: "Ingresos Recibidos" },
       ];
@@ -115,16 +143,16 @@ export const FinancialsChart: React.FC<FinancialsChartProps> = ({
       { name: "ingresos", color: "teal.6", label: "Ingresos Recibidos" },
       { name: "egresos", color: "orange.6", label: "Ayudas Entregadas" },
     ];
-  }, [viewMode]);
+  }, [filters.viewMode]);
 
   // Calcular el máximo valor dinámico para ajustar la escala Y en enfoque de egresos o categorías
   const maxYValue = useMemo(() => {
     if (chartData.length === 0) return 100;
     let max = 0;
     chartData.forEach((point) => {
-      if (viewMode === "egresos") {
+      if (filters.viewMode === "egresos") {
         if (point.egresos > max) max = point.egresos;
-      } else if (viewMode === "ingresos") {
+      } else if (filters.viewMode === "ingresos") {
         if (point.ingresos > max) max = point.ingresos;
       } else {
         if (point.ingresos > max) max = point.ingresos;
@@ -132,7 +160,7 @@ export const FinancialsChart: React.FC<FinancialsChartProps> = ({
       }
     });
     return max > 0 ? Math.ceil(max * 1.15) : 100;
-  }, [chartData, viewMode]);
+  }, [chartData, filters.viewMode]);
 
   return (
     <Card
@@ -170,32 +198,12 @@ export const FinancialsChart: React.FC<FinancialsChartProps> = ({
             </Text>
           </div>
 
-          <Group gap="sm" wrap="wrap">
-            {/* Filtro por Categoría de Ayuda */}
-            <Select
-              leftSection={<IconFilter size={16} />}
-              placeholder="Categoría"
-              data={categoryOptions}
-              value={selectedCategory}
-              onChange={(val) => setSelectedCategory(val || "Todas")}
-              style={{ width: 210 }}
-              size="xs"
-              radius="md"
-            />
-
-            {/* Selector de Enfoque de Vista */}
-            <SegmentedControl
-              size="xs"
-              color="orange"
-              value={viewMode}
-              onChange={(val) => setViewMode(val)}
-              data={[
-                { label: "Ambos", value: "ambos" },
-                { label: "Solo Egresos", value: "egresos" },
-                { label: "Solo Ingresos", value: "ingresos" },
-              ]}
-            />
-          </Group>
+          <FilterBar
+            configs={filterConfigs}
+            values={filters}
+            initialValues={initialFilters}
+            onChange={(newValues) => setFilters(newValues as typeof initialFilters)}
+          />
         </Group>
       </Stack>
 

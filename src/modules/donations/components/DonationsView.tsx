@@ -34,8 +34,17 @@ import { EntregadaModal } from "./EntregadaModal";
 import { formatDate } from "../../../utils/date";
 import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
 import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
-import { type RecibidasFilters, type EntregadasFilters, type DonacionRecibida, type DonacionEntregada } from "../types";
-import { exportToExcel, exportToCSV, type ColumnDefinition } from "../../../utils/exportUtils";
+import {
+  type RecibidasFilters,
+  type EntregadasFilters,
+  type DonacionRecibida,
+  type DonacionEntregada,
+} from "../types";
+import {
+  exportToExcel,
+  exportToCSV,
+  type ColumnDefinition,
+} from "../../../utils/exportUtils";
 import dayjs from "dayjs";
 
 const initialFiltersRecibidas: RecibidasFilters = {
@@ -53,20 +62,50 @@ const initialFiltersEntregadas: EntregadasFilters = {
 const recibidasExportColumns: ColumnDefinition<DonacionRecibida>[] = [
   { header: "Donante / Benefactor", accessor: (r) => r.entidad_donante },
   { header: "Fecha", accessor: (r) => formatDate(r.fecha) },
-  { header: "Artículo / Donativo", accessor: (r) => r.catalogo_ayudas?.nombre_articulo || "Donación General" },
-  { header: "Monto o Detalle", accessor: (r) => r.monto_o_cantidad },
-  { header: "Equivalente (USD)", accessor: (r) => r.monto_equivalente_usd != null ? `$ ${r.monto_equivalente_usd.toFixed(2)}` : "—" },
+  {
+    header: "Artículo / Donativo",
+    accessor: (r) => r.catalogo_ayudas?.nombre_articulo || "Donación General",
+  },
+  { header: "Detalle / Descripción", accessor: (r) => r.monto_o_cantidad },
+  {
+    header: "Monto Original",
+    accessor: (r) =>
+      r.monto_original != null && r.moneda
+        ? `${r.monto_original} ${r.moneda}`
+        : "—",
+  },
+  {
+    header: "Equivalente (USD)",
+    accessor: (r) =>
+      r.monto_equivalente_usd != null
+        ? `$ ${r.monto_equivalente_usd.toFixed(2)}`
+        : "—",
+  },
   { header: "Observaciones", accessor: (r) => r.observaciones || "—" },
 ];
 
 const entregadasExportColumns: ColumnDefinition<DonacionEntregada>[] = [
-  { header: "Beneficiario", accessor: (e) => e.pacientes ? e.pacientes.nombres : (e.beneficiario_externo || "Externo") },
+  {
+    header: "Beneficiario",
+    accessor: (e) =>
+      e.pacientes ? e.pacientes.nombres : e.beneficiario_externo || "Externo",
+  },
   { header: "Fecha", accessor: (e) => formatDate(e.fecha) },
-  { header: "Artículo / Ayuda", accessor: (e) => e.catalogo_ayudas?.nombre_articulo || "Artículo no especificado" },
+  {
+    header: "Artículo / Ayuda",
+    accessor: (e) =>
+      e.catalogo_ayudas?.nombre_articulo || "Artículo no especificado",
+  },
   { header: "Cantidad", accessor: (e) => e.cantidad },
-  { header: "Monto Original", accessor: (e) => `${e.monto_original} ${e.moneda}` },
-  { header: "Costo Equivalente (USD)", accessor: (e) => `$ ${e.monto_equivalente.toFixed(2)}` },
-  { header: "Soporte Físico", accessor: (e) => e.con_soporte ? "Sí" : "No" },
+  {
+    header: "Monto Original",
+    accessor: (e) => `${e.monto_original} ${e.moneda}`,
+  },
+  {
+    header: "Costo Equivalente (USD)",
+    accessor: (e) => `$ ${e.monto_equivalente.toFixed(2)}`,
+  },
+  { header: "Soporte Físico", accessor: (e) => (e.con_soporte ? "Sí" : "No") },
   { header: "Observaciones", accessor: (e) => e.observaciones || "—" },
 ];
 
@@ -129,7 +168,12 @@ export function DonationsView() {
       const dataToExport = await fetchExportRecibidas();
       const filename = `donaciones_recibidas_${dayjs().format("YYYY-MM-DD")}`;
       if (format === "excel") {
-        exportToExcel(dataToExport, recibidasExportColumns, filename, "Ingresos");
+        exportToExcel(
+          dataToExport,
+          recibidasExportColumns,
+          filename,
+          "Ingresos",
+        );
       } else {
         exportToCSV(dataToExport, recibidasExportColumns, filename);
       }
@@ -146,7 +190,12 @@ export function DonationsView() {
       const dataToExport = await fetchExportEntregadas();
       const filename = `ayudas_entregadas_${dayjs().format("YYYY-MM-DD")}`;
       if (format === "excel") {
-        exportToExcel(dataToExport, entregadasExportColumns, filename, "Egresos");
+        exportToExcel(
+          dataToExport,
+          entregadasExportColumns,
+          filename,
+          "Egresos",
+        );
       } else {
         exportToCSV(dataToExport, entregadasExportColumns, filename);
       }
@@ -254,6 +303,10 @@ export function DonationsView() {
           </Text>
         </div>
         <Group>
+          <ExportButton
+            onExport={handleExportRecibidas}
+            loading={exportingRecibidas}
+          />
           <Button
             variant="outline"
             leftSection={<IconHeartHandshake size={16} />}
@@ -336,10 +389,6 @@ export function DonationsView() {
                     setPageRecibidas(1);
                   }}
                 />
-                <ExportButton
-                  onExport={handleExportRecibidas}
-                  loading={exportingRecibidas}
-                />
               </Group>
             </Group>
 
@@ -353,14 +402,15 @@ export function DonationsView() {
                   <Table striped highlightOnHover verticalSpacing="sm">
                     <Table.Thead>
                       <Table.Tr>
-                        <Table.Th style={{ width: "30%" }}>
+                        <Table.Th style={{ width: "22%" }}>
                           Donante / Benefactor
                         </Table.Th>
-                        <Table.Th style={{ width: "15%" }}>Fecha</Table.Th>
-                        <Table.Th style={{ width: "30%" }}>
-                          Monto o Detalle
+                        <Table.Th style={{ width: "10%" }}>Fecha</Table.Th>
+                        <Table.Th style={{ width: "18%" }}>
+                          Detalle / Descripción
                         </Table.Th>
-                        <Table.Th style={{ width: "25%" }}>
+                        <Table.Th style={{ width: "15%" }}>Monto</Table.Th>
+                        <Table.Th style={{ width: "32%" }}>
                           Observaciones
                         </Table.Th>
                       </Table.Tr>
@@ -368,7 +418,7 @@ export function DonationsView() {
                     <Table.Tbody>
                       {recibidas.length === 0 ? (
                         <Table.Tr>
-                          <Table.Td colSpan={4}>
+                          <Table.Td colSpan={5}>
                             <Text ta="center" py="xl" c="dimmed">
                               No se encontraron donaciones recibidas que
                               coincidan con la búsqueda.
@@ -406,27 +456,53 @@ export function DonationsView() {
                                   {r.catalogo_ayudas.nombre_articulo}
                                 </Badge>
                               )}
-                              <Text size="sm" fw={700} c="teal">
+                              <Text
+                                size="sm"
+                                style={{
+                                  whiteSpace: "normal",
+                                  wordBreak: "break-word",
+                                }}
+                              >
                                 {r.monto_o_cantidad}
                               </Text>
-                              {r.monto_original &&
-                                r.moneda &&
-                                r.monto_equivalente_usd != null && (
-                                  <Text size="xs" c="dimmed">
-                                    Equiv: ${" "}
-                                    {r.monto_equivalente_usd.toLocaleString(
-                                      "es-ES",
-                                      {
-                                        minimumFractionDigits: 2,
-                                        maximumFractionDigits: 2,
-                                      },
-                                    )}{" "}
-                                    USD
-                                  </Text>
-                                )}
                             </Table.Td>
-                            <Table.Td style={{ maxWidth: 200 }}>
-                              <Text size="sm" c="dimmed" truncate="end">
+
+                            <Table.Td>
+                              {r.monto_original != null && r.moneda ? (
+                                <Text size="sm" fw={700} c="teal">
+                                  {r.monto_original.toLocaleString("es-ES", {
+                                    maximumFractionDigits: 2,
+                                  })}{" "}
+                                  {r.moneda}
+                                </Text>
+                              ) : (
+                                <Text size="sm" c="dimmed">
+                                  —
+                                </Text>
+                              )}
+                              {r.monto_equivalente_usd != null && (
+                                <Text size="xs" c="dimmed">
+                                  Equiv: ${" "}
+                                  {r.monto_equivalente_usd.toLocaleString(
+                                    "es-ES",
+                                    {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    },
+                                  )}{" "}
+                                  USD
+                                </Text>
+                              )}
+                            </Table.Td>
+                            <Table.Td style={{ minWidth: 150 }}>
+                              <Text
+                                size="sm"
+                                c="dimmed"
+                                style={{
+                                  whiteSpace: "normal",
+                                  wordBreak: "break-word",
+                                }}
+                              >
                                 {r.observaciones || "—"}
                               </Text>
                             </Table.Td>
@@ -625,8 +701,15 @@ export function DonationsView() {
                                 </Tooltip>
                               )}
                             </Table.Td>
-                            <Table.Td style={{ maxWidth: 150 }}>
-                              <Text size="sm" c="dimmed" truncate="end">
+                            <Table.Td style={{ minWidth: 150 }}>
+                              <Text
+                                size="sm"
+                                c="dimmed"
+                                style={{
+                                  whiteSpace: "normal",
+                                  wordBreak: "break-word",
+                                }}
+                              >
                                 {e.observaciones || "—"}
                               </Text>
                             </Table.Td>

@@ -17,6 +17,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { ConfirmModal } from '../UI/ConfirmModal';
 import { supabase } from '../../config/supabase';
 import { useAuth } from '../../modules/auth/hooks/useAuth';
+import { useBranding } from '../../modules/settings/hooks/useBranding';
 
 const RibbonIcon = ({ size = 22, color = '#ffffff' }: { size?: number; color?: string }) => (
   <svg
@@ -41,6 +42,7 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, perfil } = useAuth();
+  const { branding } = useBranding();
 
   const getInitials = (nombres?: string) => {
     if (!nombres) return "US";
@@ -86,35 +88,60 @@ export const Sidebar: React.FC = () => {
           top: 0,
         }}
       >
-        {/* Brand Header — Identidad Institucional */}
-        <Group p="lg" gap="sm">
-          <Box
-            style={{
-              width: 40,
-              height: 40,
-              borderRadius: 10,
-              background: 'linear-gradient(135deg, var(--anican-naranja), var(--anican-amarillo))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <RibbonIcon size={22} color="#ffffff" />
-          </Box>
-          <div>
+        {/* Brand Header — Identidad Institucional Dinámica */}
+        <Group p="lg" gap="sm" wrap="nowrap">
+          {branding.logo_url ? (
+            <Box
+              style={{
+                width: 42,
+                height: 42,
+                borderRadius: 10,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                flexShrink: 0,
+              }}
+            >
+              <img
+                src={branding.logo_url}
+                alt={branding.nombre_fundacion}
+                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            </Box>
+          ) : (
+            <Box
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: 10,
+                background: 'linear-gradient(135deg, var(--anican-naranja), var(--anican-amarillo))',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <RibbonIcon size={22} color="#ffffff" />
+            </Box>
+          )}
+          <div style={{ overflow: 'hidden' }}>
             <Title
               order={3}
               style={{
                 fontFamily: 'var(--font-sans)',
                 letterSpacing: -0.5,
                 color: 'var(--anican-azul-oscuro)',
-                fontSize: 18,
+                fontSize: 17,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
-              Anican
+              {branding.nombre_fundacion || 'Anican'}
             </Title>
-            <Text size="xs" c="dimmed" fw={500} style={{ lineHeight: 1.2 }}>
-              Fundación Cáncer Infantil
+            <Text size="xs" c="dimmed" fw={500} truncate style={{ lineHeight: 1.2 }}>
+              {branding.rif ? `RIF: ${branding.rif}` : 'Fundación Cáncer Infantil'}
             </Text>
           </div>
         </Group>
