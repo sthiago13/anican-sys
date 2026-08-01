@@ -46,10 +46,10 @@ export function useRates() {
       }
 
       console.log(
-        "No se encontraron tasas locales para hoy. Buscando la tasa más reciente registrada...",
+        "[useRates] 🚀 No se encontraron tasas locales para hoy. Buscando la tasa más reciente registrada...",
       );
 
-      // Buscar la tasa más reciente registrada para usarla como fallback dinámico
+      // Buscar la tasa más reciente registrada para usar como fallback dinámico
       const { data: latestData, error: latestError } = await supabase
         .from("tasas_cambio")
         .select("*")
@@ -59,7 +59,7 @@ export function useRates() {
 
       if (latestError) {
         console.warn(
-          "Error al buscar tasas anteriores, usando fallbacks estáticos:",
+          "[useRates] Error al buscar tasas anteriores, usando fallbacks estáticos:",
           latestError,
         );
       }
@@ -71,9 +71,10 @@ export function useRates() {
         ? Number(latestData.tasa_cop)
         : COP_FALLBACK;
 
-      console.log("Consultando APIs externas con fallbacks dinámicos:", {
+      console.log("[useRates] Consultando APIs externas con fallbacks dinámicos:", {
         fallbackVes,
         fallbackCop,
+        latestDate: latestData?.fecha,
       });
 
       let apiVes = fallbackVes;
@@ -83,44 +84,54 @@ export function useRates() {
 
       // 1. Consultar tasa VES (BCV Oficial)
       try {
+        console.log("[useRates] 🇻🇪 Consultando API VES (BCV Oficial)...");
         const vesResponse = await fetch(
           "https://ve.dolarapi.com/v1/dolares/oficial",
         );
         if (vesResponse.ok) {
           const vesJson = await vesResponse.json();
+          console.log("[useRates] 🇻🇪 Respuesta completa API VES (HTTP status:", vesResponse.status, "):", vesJson);
+
           const apiFechaVes = vesJson.fechaActualizacion
-            ? vesJson.fechaActualizacion.substring(0, 10)
+            ? String(vesJson.fechaActualizacion).substring(0, 10)
+            : vesJson.fecha
+            ? String(vesJson.fecha).substring(0, 10)
             : "";
 
           if (apiFechaVes === hoyStr) {
             apiVes =
               Number(vesJson.promedio) || Number(vesJson.venta) || fallbackVes;
             vesIsToday = true;
-            console.log("Tasa VES oficial obtenida para hoy:", apiVes);
+            console.log("[useRates] 🇻🇪 Tasa VES oficial obtenida para hoy:", apiVes);
           } else {
             apiVes =
               Number(vesJson.promedio) || Number(vesJson.venta) || fallbackVes;
             console.log(
-              `Tasa VES externa aún no actualizada para hoy (${apiFechaVes}). Usando en memoria:`,
+              `[useRates] 🇻🇪 Tasa VES externa aún no actualizada para hoy (${apiFechaVes}). Usando valor extraído:`,
               apiVes,
             );
           }
         } else {
           console.warn(
-            "Fallo al consultar tasa VES oficial, usando contingencia.",
+            `[useRates] ⚠️ Fallo HTTP al consultar tasa VES oficial (${vesResponse.status}), usando contingencia.`,
           );
         }
       } catch (vesErr) {
-        console.error("Error al obtener tasa VES (BCV oficial):", vesErr);
+        console.error("[useRates] ❌ Error al obtener tasa VES (BCV oficial):", vesErr);
       }
 
       // 2. Consultar tasa COP (TRM Oficial)
       try {
+        console.log("[useRates] 🇨🇴 Consultando API COP (TRM Oficial)...");
         const copResponse = await fetch("https://co.dolarapi.com/v1/trm");
         if (copResponse.ok) {
           const copJson = await copResponse.json();
+          console.log("[useRates] 🇨🇴 Respuesta completa API COP/TRM (HTTP status:", copResponse.status, "):", copJson);
+
           const apiFechaCop = copJson.fechaActualizacion
-            ? copJson.fechaActualizacion.substring(0, 10)
+            ? String(copJson.fechaActualizacion).substring(0, 10)
+            : copJson.fecha
+            ? String(copJson.fecha).substring(0, 10)
             : "";
 
           if (apiFechaCop === hoyStr) {
@@ -130,7 +141,7 @@ export function useRates() {
               Number(copJson.venta) ||
               fallbackCop;
             copIsToday = true;
-            console.log("Tasa COP oficial obtenida para hoy:", apiCop);
+            console.log("[useRates] 🇨🇴 Tasa COP oficial obtenida para hoy:", apiCop);
           } else {
             apiCop =
               Number(copJson.valor) ||
@@ -138,17 +149,17 @@ export function useRates() {
               Number(copJson.venta) ||
               fallbackCop;
             console.log(
-              `Tasa COP externa aún no actualizada para hoy (${apiFechaCop}). Usando en memoria:`,
+              `[useRates] 🇨🇴 Tasa COP externa aún no actualizada para hoy (${apiFechaCop}). Usando valor extraído:`,
               apiCop,
             );
           }
         } else {
           console.warn(
-            "Fallo al consultar tasa COP (TRM) oficial, usando contingencia.",
+            `[useRates] ⚠️ Fallo HTTP al consultar tasa COP (TRM) oficial (${copResponse.status}), usando contingencia.`,
           );
         }
       } catch (copErr) {
-        console.error("Error al obtener tasa COP (TRM oficial):", copErr);
+        console.error("[useRates] ❌ Error al obtener tasa COP (TRM oficial):", copErr);
       }
 
       // 3. Determinar si debemos guardar el registro en la base de datos para el día de hoy
@@ -158,12 +169,11 @@ export function useRates() {
       // Guardamos en la base de datos si:
       // a) Ambas tasas externas ya están actualizadas para la fecha de hoy
       // b) O si al menos una de las tasas no está actualizada, pero ya es tarde en el día (>= 6:00 AM hora local)
-      //    (esto indica fin de semana o feriado, por lo que la tasa no cambiará y no queremos seguir haciendo llamadas)
       const debeGuardar = (vesIsToday && copIsToday) || currentHour >= 6;
 
       if (!debeGuardar) {
         console.log(
-          "Las tasas de la API externa aún no corresponden a hoy y es muy temprano (antes de las 6:00 AM). No se insertará en base de datos para permitir reintentos posteriores.",
+          "[useRates] Las tasas de la API externa aún no corresponden a hoy y es muy temprano (antes de las 6:00 AM). No se insertará en base de datos para permitir reintentos posteriores.",
         );
         const memoryRates: TasaCambio = {
           id: "temp-rates",
@@ -175,7 +185,7 @@ export function useRates() {
         return memoryRates;
       }
 
-      console.log("Guardando tasas en base de datos para hoy...", {
+      console.log("[useRates] Guardando tasas en base de datos para hoy...", {
         apiVes,
         apiCop,
       });
@@ -209,7 +219,7 @@ export function useRates() {
 
       return null;
     } catch (err) {
-      console.error("Error general en fetchTodayRates:", err);
+      console.error("[useRates] Error general en fetchTodayRates:", err);
       const fallbackRates: TasaCambio = {
         id: "",
         fecha: hoyStr,
