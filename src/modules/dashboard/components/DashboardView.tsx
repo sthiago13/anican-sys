@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Stack, Title, Text, Grid, Divider, Card, Group, Center, Loader, SegmentedControl } from "@mantine/core";
-import { IconActivity, IconHeartHandshake, IconCash, IconPresentationAnalytics } from "@tabler/icons-react";
+import { IconActivity, IconHeartHandshake, IconCash, IconPresentationAnalytics, IconUserPlus } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../../../components/UI/StatCard";
 import { PacienteTable } from "../../patients/components/PatientTable";
@@ -229,41 +229,128 @@ export function DashboardView() {
 
       <Divider />
 
-      <Card
-        withBorder
-        radius="md"
-        p="md"
-        shadow="xs"
-        className="anican-card-hover"
-        style={{
-          backgroundColor: "var(--anican-naranja-light)",
-          borderColor: "var(--anican-naranja)",
-        }}
-      >
-        <Group justify="space-between" align="center" wrap="nowrap">
-          <Group gap="md" wrap="nowrap">
-            <Center style={{ color: "var(--anican-naranja)" }}>
-              <IconPresentationAnalytics size={36} stroke={1.5} />
-            </Center>
-            <div>
-              <Text fw={600} size="sm" c="var(--anican-azul-oscuro)">
-                Acceso Rápido a Reportes de Gestión
-              </Text>
-              <Text size="xs" c="dimmed">
-                Visualiza estadísticas avanzadas, finanzas consolidadas e históricos listos para patrocinadores.
-              </Text>
-            </div>
-          </Group>
-          <Button
-            color="orange"
+      <Grid>
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Card
+            withBorder
             radius="md"
-            onClick={() => navigate("/reportes")}
-            styles={{ root: { flexShrink: 0 } }}
+            p="md"
+            shadow="xs"
+            className="anican-card-hover"
+            style={{
+              backgroundColor: "var(--anican-bg-card)",
+              borderColor: "var(--anican-border)",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
           >
-            Ver Reportes
-          </Button>
-        </Group>
-      </Card>
+            <Group gap="md" align="flex-start" wrap="nowrap" mb="md">
+              <Center style={{ color: "var(--anican-naranja)", flexShrink: 0 }}>
+                <IconUserPlus size={32} stroke={1.5} />
+              </Center>
+              <div>
+                <Text fw={600} size="sm" c="var(--anican-azul-oscuro)">
+                  Nuevo Registro
+                </Text>
+                <Text size="xs" c="dimmed" style={{ lineHeight: 1.3 }}>
+                  Registra un nuevo paciente pediátrico y su representante legal en el sistema.
+                </Text>
+              </div>
+            </Group>
+            <Button
+              color="orange"
+              fullWidth
+              radius="md"
+              onClick={() => navigate("/registro")}
+            >
+              Ir a Registro
+            </Button>
+          </Card>
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Card
+            withBorder
+            radius="md"
+            p="md"
+            shadow="xs"
+            className="anican-card-hover"
+            style={{
+              backgroundColor: "var(--anican-bg-card)",
+              borderColor: "var(--anican-border)",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <Group gap="md" align="flex-start" wrap="nowrap" mb="md">
+              <Center style={{ color: "var(--anican-naranja)", flexShrink: 0 }}>
+                <IconHeartHandshake size={32} stroke={1.5} />
+              </Center>
+              <div>
+                <Text fw={600} size="sm" c="var(--anican-azul-oscuro)">
+                  Donaciones
+                </Text>
+                <Text size="xs" c="dimmed" style={{ lineHeight: 1.3 }}>
+                  Administra las donaciones recibidas y entregadas para los niños atendidos.
+                </Text>
+              </div>
+            </Group>
+            <Button
+              color="orange"
+              fullWidth
+              radius="md"
+              onClick={() => navigate("/donaciones")}
+            >
+              Ir a Donaciones
+            </Button>
+          </Card>
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <Card
+            withBorder
+            radius="md"
+            p="md"
+            shadow="xs"
+            className="anican-card-hover"
+            style={{
+              backgroundColor: "var(--anican-bg-card)",
+              borderColor: "var(--anican-border)",
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+            <Group gap="md" align="flex-start" wrap="nowrap" mb="md">
+              <Center style={{ color: "var(--anican-naranja)", flexShrink: 0 }}>
+                <IconPresentationAnalytics size={32} stroke={1.5} />
+              </Center>
+              <div>
+                <Text fw={600} size="sm" c="var(--anican-azul-oscuro)">
+                  Reportes de Gestión
+                </Text>
+                <Text size="xs" c="dimmed" style={{ lineHeight: 1.3 }}>
+                  Visualiza estadísticas avanzadas, finanzas e históricos para patrocinadores.
+                </Text>
+              </div>
+            </Group>
+            <Button
+              color="orange"
+              fullWidth
+              radius="md"
+              onClick={() => navigate("/reportes")}
+            >
+              Ver Reportes
+            </Button>
+          </Card>
+        </Grid.Col>
+      </Grid>
+
 
       <Card withBorder radius="md" p="lg" shadow="xs">
         <Group justify="space-between" mb="md">
@@ -280,7 +367,7 @@ export function DashboardView() {
           </Button>
         </Group>
         <PacienteTable
-          pacientes={pacientes.slice(0, 3)}
+          pacientes={pacientes.slice(0, 5)}
           diagnosticos={diagnosticos}
           onUpdateStatus={handleUpdateStatus}
           onUpdatePaciente={handleUpdatePaciente}
