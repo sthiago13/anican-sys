@@ -13,6 +13,7 @@ import {
   Center,
   Loader,
   Pagination,
+  SegmentedControl,
 } from "@mantine/core";
 import {
   IconCash,
@@ -23,6 +24,8 @@ import {
   IconCalendar,
   IconFileText,
   IconUserCheck,
+  IconCirclePlus,
+  IconGift,
 } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { ExportButton } from "../../../components/UI/ExportButton";
@@ -278,9 +281,65 @@ export function DonationsView() {
   const [recibidaModalOpened, setRecibidaModalOpened] = useState(false);
   const [entregadaModalOpened, setEntregadaModalOpened] = useState(false);
 
-  // KPIs globales desde stats
-  const totalEntregadoMonetario = stats.totalEntregadoMonetario;
-  const totalRecibidoMonetario = stats.totalRecibidoMonetario;
+  // Selector de período para mini estadísticas (Lógica idéntica al DashboardView)
+  const [periodoStats, setPeriodoStats] = useState<"dia" | "semana" | "mes" | "ano" | "historico">("mes");
+
+  const calcDonationStats = useMemo(() => {
+    const allRec = stats.allRecibidasStats || [];
+    const allEnt = stats.allEntregadasStats || [];
+
+    if (periodoStats === "historico") {
+      const recSum = allRec.reduce((acc, r) => acc + (Number(r.monto_equivalente_usd) || 0), 0);
+      const entSum = allEnt.reduce((acc, e) => acc + (Number(e.monto_equivalente) || 0), 0);
+      return {
+        recibidoMonetario: recSum,
+        entregadoMonetario: entSum,
+        entregadasCount: allEnt.length,
+      };
+    }
+
+    const getDays = (p: typeof periodoStats) => {
+      switch (p) {
+        case "dia": return 1;
+        case "semana": return 7;
+        case "mes": return 30;
+        case "ano": return 365;
+        default: return 30;
+      }
+    };
+
+    const dias = getDays(periodoStats);
+    const hoy = new Date();
+    const hacePeriodo = new Date();
+    hacePeriodo.setDate(hoy.getDate() - dias);
+
+    const filteredRec = allRec.filter((item) => {
+      const dateStr = item.created_at || item.fecha;
+      if (!dateStr) return false;
+      const f = new Date(dateStr);
+      return f >= hacePeriodo;
+    });
+
+    const filteredEnt = allEnt.filter((item) => {
+      const dateStr = item.created_at || item.fecha;
+      if (!dateStr) return false;
+      const f = new Date(dateStr);
+      return f >= hacePeriodo;
+    });
+
+    const recSum = filteredRec.reduce((acc, r) => acc + (Number(r.monto_equivalente_usd) || 0), 0);
+    const entSum = filteredEnt.reduce((acc, e) => acc + (Number(e.monto_equivalente) || 0), 0);
+
+    return {
+      recibidoMonetario: recSum,
+      entregadoMonetario: entSum,
+      entregadasCount: filteredEnt.length,
+    };
+  }, [stats.allRecibidasStats, stats.allEntregadasStats, periodoStats]);
+
+  const totalRecibidoMonetarioCalc = calcDonationStats.recibidoMonetario;
+  const totalEntregadoMonetarioCalc = calcDonationStats.entregadoMonetario;
+  const totalEntregadasCountCalc = calcDonationStats.entregadasCount;
   const totalRecibidasCount = stats.totalRecibidasCount;
   const totalEntregadasCount = stats.totalEntregadasCount;
 
@@ -302,70 +361,192 @@ export function DonationsView() {
             por la Fundación Anican
           </Text>
         </div>
-        <Group>
-          <ExportButton
-            onExport={handleExportRecibidas}
-            loading={exportingRecibidas}
-          />
-          <Button
-            variant="outline"
-            leftSection={<IconHeartHandshake size={16} />}
-            onClick={() => setRecibidaModalOpened(true)}
-          >
-            Registrar Ingreso
-          </Button>
-          <Button
-            leftSection={<IconCash size={16} />}
-            onClick={() => setEntregadaModalOpened(true)}
-          >
-            Registrar Entrega
-          </Button>
-        </Group>
+        <ExportButton
+          onExport={activeTab === "recibidas" ? handleExportRecibidas : handleExportEntregadas}
+          loading={exportingRecibidas || exportingEntregadas}
+          label={`Exportar ${activeTab === "recibidas" ? "Ingresos" : "Egresos"}`}
+        />
       </Group>
 
-      <Grid>
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <StatCard
-            title="Total Financiado / Entregado"
-            value={`$ ${totalEntregadoMonetario.toLocaleString("es-ES", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}`}
-            icon={<IconCash size={48} />}
-            color="green"
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <StatCard
-            title="Total Donado / Recibido"
-            value={`$ ${totalRecibidoMonetario.toLocaleString("es-ES", {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}`}
-            icon={<IconHeartHandshake size={48} />}
-            color="blue"
-          />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <StatCard
-            title="Ayudas Entregadas"
-            value={`${totalEntregadasCount} egresos`}
-            icon={<IconUserHeart size={48} />}
+      {/* Sección de Mini Estadísticas con Selector de Período y Acciones Rápidas */}
+      <Stack gap="xs">
+        <Group justify="space-between" align="center">
+          <Text fw={700} size="md" c="var(--anican-azul-oscuro)">
+            Resumen Financiero e Insumos
+          </Text>
+          <SegmentedControl
+            value={periodoStats}
+            onChange={(val: any) => setPeriodoStats(val)}
+            data={[
+              { label: "Día", value: "dia" },
+              { label: "Semana", value: "semana" },
+              { label: "Mes", value: "mes" },
+              { label: "Año", value: "ano" },
+              { label: "Histórico", value: "historico" },
+            ]}
             color="orange"
+            size="sm"
+            radius="md"
           />
-        </Grid.Col>
-      </Grid>
+        </Group>
+
+        <Grid align="stretch">
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <StatCard
+              title="Total Financiado / Entregado"
+              value={`$ ${totalEntregadoMonetarioCalc.toLocaleString("es-ES", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`}
+              icon={<IconCash size={40} />}
+              color="green"
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <StatCard
+              title="Total Donado / Recibido"
+              value={`$ ${totalRecibidoMonetarioCalc.toLocaleString("es-ES", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}`}
+              icon={<IconHeartHandshake size={40} />}
+              color="blue"
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <StatCard
+              title="Ayudas Entregadas"
+              value={`${totalEntregadasCountCalc} egresos`}
+              icon={<IconUserHeart size={40} />}
+              color="orange"
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
+            <Card
+              withBorder
+              radius="md"
+              p="sm"
+              shadow="xs"
+              style={{
+                backgroundColor: "var(--anican-bg-card)",
+                borderColor: "var(--anican-border)",
+                height: "100%",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                gap: "8px",
+              }}
+            >
+              <Text size="xs" fw={700} c="dimmed" tt="uppercase" style={{ letterSpacing: 0.5 }}>
+                Acciones Rápidas
+              </Text>
+              <Button
+                size="md"
+                color="teal"
+                variant="filled"
+                leftSection={<IconCirclePlus size={20} />}
+                onClick={() => setRecibidaModalOpened(true)}
+                styles={{
+                  root: {
+                    height: "auto",
+                    paddingTop: "6px",
+                    paddingBottom: "6px",
+                    boxShadow: "0 2px 6px rgba(12, 133, 153, 0.25)",
+                  },
+                }}
+              >
+                <Stack gap={0} align="flex-start">
+                  <Text fw={700} size="xs" lh={1.2}>
+                    Registrar Ingreso
+                  </Text>
+                  <Text size="10px" c="white" style={{ opacity: 0.85 }} lh={1.2}>
+                    Entrada de donación o insumo
+                  </Text>
+                </Stack>
+              </Button>
+              <Button
+                size="md"
+                color="orange"
+                variant="filled"
+                leftSection={<IconGift size={20} />}
+                onClick={() => setEntregadaModalOpened(true)}
+                styles={{
+                  root: {
+                    height: "auto",
+                    paddingTop: "6px",
+                    paddingBottom: "6px",
+                    boxShadow: "0 2px 6px rgba(232, 115, 25, 0.25)",
+                  },
+                }}
+              >
+                <Stack gap={0} align="flex-start">
+                  <Text fw={700} size="xs" lh={1.2}>
+                    Registrar Entrega
+                  </Text>
+                  <Text size="10px" c="white" style={{ opacity: 0.85 }} lh={1.2}>
+                    Salida de ayuda a paciente
+                  </Text>
+                </Stack>
+              </Button>
+            </Card>
+          </Grid.Col>
+        </Grid>
+      </Stack>
 
       <Card withBorder radius="md" p="lg" shadow="xs">
         <Tabs value={activeTab} onChange={setActiveTab} color="orange">
-          <Tabs.List mb="md">
+          <Tabs.List mb="md" style={{ borderBottom: "2px solid var(--anican-border)", gap: "12px" }}>
             <Tabs.Tab
               value="recibidas"
-              leftSection={<IconHeartHandshake size={16} />}
+              leftSection={<IconHeartHandshake size={18} />}
+              style={{
+                fontWeight: activeTab === "recibidas" ? 700 : 500,
+                fontSize: "14px",
+                padding: "10px 20px",
+                backgroundColor:
+                  activeTab === "recibidas"
+                    ? "rgba(232, 115, 25, 0.08)"
+                    : "transparent",
+                color:
+                  activeTab === "recibidas"
+                    ? "#e87319"
+                    : "var(--anican-text-dimmed, #666666)",
+                borderBottom:
+                  activeTab === "recibidas"
+                    ? "3px solid #e87319"
+                    : "3px solid transparent",
+                borderRadius: "8px 8px 0 0",
+                transition: "none",
+                marginBottom: "-2px",
+              }}
             >
               Ingresos (Donaciones Recibidas) ({totalRecibidasCount})
             </Tabs.Tab>
-            <Tabs.Tab value="entregadas" leftSection={<IconCash size={16} />}>
+
+            <Tabs.Tab
+              value="entregadas"
+              leftSection={<IconCash size={18} />}
+              style={{
+                fontWeight: activeTab === "entregadas" ? 700 : 500,
+                fontSize: "14px",
+                padding: "10px 20px",
+                backgroundColor:
+                  activeTab === "entregadas"
+                    ? "rgba(232, 115, 25, 0.08)"
+                    : "transparent",
+                color:
+                  activeTab === "entregadas"
+                    ? "#e87319"
+                    : "var(--anican-text-dimmed, #666666)",
+                borderBottom:
+                  activeTab === "entregadas"
+                    ? "3px solid #e87319"
+                    : "3px solid transparent",
+                borderRadius: "8px 8px 0 0",
+                transition: "none",
+                marginBottom: "-2px",
+              }}
+            >
               Egresos (Ayudas Entregadas) ({totalEntregadasCount})
             </Tabs.Tab>
           </Tabs.List>
@@ -551,10 +732,6 @@ export function DonationsView() {
                     setFiltersEntregadas(newFilters as EntregadasFilters);
                     setPageEntregadas(1);
                   }}
-                />
-                <ExportButton
-                  onExport={handleExportEntregadas}
-                  loading={exportingEntregadas}
                 />
               </Group>
             </Group>

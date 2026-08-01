@@ -175,7 +175,7 @@ export function DashboardView() {
           >
             Panel de Control
           </Title>
-          <Text c="dimmed">Resumen general de la Fundación Anican</Text>
+          <Text c="dimmed">Resumen general del sistema</Text>
         </div>
         <SegmentedControl
           value={periodo}

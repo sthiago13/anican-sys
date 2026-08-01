@@ -1,5 +1,19 @@
 import React, { useEffect, useState } from "react";
-import { Modal, TextInput, Select, Textarea, Stack, Alert, Group, Switch, NumberInput, Text, Divider } from "@mantine/core";
+import {
+  Modal,
+  TextInput,
+  Select,
+  Textarea,
+  Stack,
+  Alert,
+  Group,
+  Switch,
+  NumberInput,
+  Text,
+  Divider,
+  Grid,
+  Card,
+} from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { IconAlertCircle } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
@@ -194,6 +208,7 @@ export function RecibidaModal({
       onClose={onClose}
       title="Registrar Donación Recibida (Ingreso)"
       centered
+      size="xl"
       radius="md"
       styles={{
         title: {
@@ -210,99 +225,38 @@ export function RecibidaModal({
             </Alert>
           )}
 
-          <DateInput
-            label="Fecha del Ingreso"
-            placeholder="Seleccionar fecha"
-            required
-            value={fecha}
-            onChange={(val: any) => setFecha(val)}
-            maxDate={new Date()}
-            valueFormat="DD/MM/YYYY"
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
+          <Grid>
+            {/* Columna Izquierda: Información General */}
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="sm">
+                <Text fw={700} size="sm" c="teal">
+                  1. Datos de la Donación
+                </Text>
 
-          <TextInput
-            label="Entidad Donante / Benefactor"
-            placeholder="Ej. Farmatodo, Chevron, Particular Anónimo"
-            required
-            value={entidadDonante}
-            onChange={(e) => setEntidadDonante(e.target.value)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <Select
-            label="Artículo / Donativo del Catálogo"
-            placeholder="Seleccionar artículo para clasificar el donativo"
-            required
-            searchable
-            data={ayudaOptions}
-            value={idAyuda}
-            onChange={(value) => setIdAyuda(value)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <Divider my="xs" />
-
-          <TextInput
-            label="Detalle / Descripción de la Donación"
-            placeholder="Ej. 10 cajas de Ensure, 5 botes de Medicamento, Aporte monetario"
-            required
-            value={montoOCantidad}
-            onChange={(e) => setMontoOCantidad(e.target.value)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <Switch
-            label="¿Deseas registrar una valoración financiera/equivalente de esta donación?"
-            checked={esMonetario}
-            onChange={(e) => setEsMonetario(e.currentTarget.checked)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-              },
-            }}
-          />
-
-          {esMonetario && (
-            <Stack gap="xs">
-              <Group grow>
-                <NumberInput
-                  label="Monto Estimado / Donado"
-                  placeholder="Ej. 500"
+                <DateInput
+                  label="Fecha del Ingreso"
+                  placeholder="Seleccionar fecha"
                   required
-                  min={0.01}
-                  decimalScale={2}
-                  value={montoOriginal}
-                  onChange={(value) => setMontoOriginal(value)}
+                  value={fecha}
+                  onChange={(val: any) => setFecha(val)}
+                  maxDate={new Date()}
+                  valueFormat="DD/MM/YYYY"
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
+
+                <TextInput
+                  label="Entidad Donante / Benefactor"
+                  placeholder="Ej. Farmatodo, Chevron, Particular Anónimo"
+                  required
+                  value={entidadDonante}
+                  onChange={(e) => setEntidadDonante(e.target.value)}
                   styles={{
                     label: {
                       fontWeight: 600,
@@ -314,15 +268,13 @@ export function RecibidaModal({
                 />
 
                 <Select
-                  label="Moneda"
+                  label="Artículo / Donativo del Catálogo"
+                  placeholder="Seleccionar artículo"
                   required
-                  data={[
-                    { value: "USD", label: "Dólares (USD)" },
-                    { value: "VES", label: "Bolívares (VES)" },
-                    { value: "COP", label: "Pesos (COP)" },
-                  ]}
-                  value={moneda}
-                  onChange={(value) => setMoneda(value)}
+                  searchable
+                  data={ayudaOptions}
+                  value={idAyuda}
+                  onChange={(value) => setIdAyuda(value)}
                   styles={{
                     label: {
                       fontWeight: 600,
@@ -332,78 +284,166 @@ export function RecibidaModal({
                     input: { borderRadius: 8 },
                   }}
                 />
-              </Group>
 
-              {moneda !== "USD" ? (
                 <TextInput
-                  label="Tasa de Cambio Aplicada"
-                  value={`1 USD = ${Number(tasaCambio).toFixed(4)} ${moneda}`}
-                  readOnly
+                  label="Detalle / Descripción de la Donación"
+                  placeholder="Ej. 10 cajas de Ensure, 5 botes de Medicamento"
+                  required
+                  value={montoOCantidad}
+                  onChange={(e) => setMontoOCantidad(e.target.value)}
                   styles={{
                     label: {
                       fontWeight: 600,
                       color: "var(--anican-azul-oscuro)",
                       marginBottom: 4,
                     },
-                    input: {
-                      borderRadius: 8,
-                      backgroundColor: "var(--anican-bg)",
-                      fontWeight: 600,
-                    },
+                    input: { borderRadius: 8 },
                   }}
                 />
-              ) : (
-                <TextInput
-                  label="Valor Contable (USD)"
-                  value={`$ ${numOrig.toFixed(2)} USD`}
-                  readOnly
-                  styles={{
-                    label: {
-                      fontWeight: 600,
-                      color: "var(--anican-azul-oscuro)",
-                      marginBottom: 4,
-                    },
-                    input: { borderRadius: 8, backgroundColor: "var(--anican-bg)" },
-                  }}
-                />
-              )}
+              </Stack>
+            </Grid.Col>
 
-              {moneda !== "USD" && (
-                <Text size="xs" c="dimmed" fw={600} ta="right" mt={-2}>
-                  Equivalente contable:{" "}
-                  <strong style={{ color: "green" }}>
-                    $ {equivalenciaUsdCalculada.toLocaleString("es-ES", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    USD
-                  </strong>
+            {/* Columna Derecha: Valoración Financiera y Notas */}
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="sm">
+                <Text fw={700} size="sm" c="teal">
+                  2. Valoración Financiera & Notas
                 </Text>
-              )}
-            </Stack>
-          )}
 
-          <Textarea
-            label="Observaciones"
-            placeholder="Detalles adicionales, número de referencia bancaria o desglose de insumos..."
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            minRows={3}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
+                <Card withBorder radius="md" p="sm" bg="var(--anican-bg-card, #f8f9fa)">
+                  <Stack gap="xs">
+                    <Switch
+                      label="¿Deseas registrar una valoración financiera?"
+                      checked={esMonetario}
+                      onChange={(e) => setEsMonetario(e.currentTarget.checked)}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          color: "var(--anican-azul-oscuro)",
+                          fontSize: "13px",
+                        },
+                      }}
+                    />
 
-          <Group justify="flex-end" mt="md">
+                    {esMonetario && (
+                      <>
+                        <Group grow gap="xs">
+                          <NumberInput
+                            label="Monto Estimado"
+                            placeholder="Ej. 500"
+                            required
+                            min={0.01}
+                            decimalScale={2}
+                            value={montoOriginal}
+                            onChange={(value) => setMontoOriginal(value)}
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: { borderRadius: 8 },
+                            }}
+                          />
+
+                          <Select
+                            label="Moneda"
+                            required
+                            data={[
+                              { value: "USD", label: "Dólares (USD)" },
+                              { value: "VES", label: "Bolívares (VES)" },
+                              { value: "COP", label: "Pesos (COP)" },
+                            ]}
+                            value={moneda}
+                            onChange={(value) => setMoneda(value)}
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: { borderRadius: 8 },
+                            }}
+                          />
+                        </Group>
+
+                        {moneda !== "USD" ? (
+                          <TextInput
+                            label="Tasa de Cambio Aplicada"
+                            value={`1 USD = ${Number(tasaCambio).toFixed(4)} ${moneda}`}
+                            readOnly
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: {
+                                borderRadius: 8,
+                                backgroundColor: "var(--anican-bg)",
+                                fontWeight: 600,
+                              },
+                            }}
+                          />
+                        ) : (
+                          <TextInput
+                            label="Valor Contable (USD)"
+                            value={`$ ${numOrig.toFixed(2)} USD`}
+                            readOnly
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: { borderRadius: 8, backgroundColor: "var(--anican-bg)" },
+                            }}
+                          />
+                        )}
+
+                        {moneda !== "USD" && (
+                          <Text size="xs" c="dimmed" fw={600} ta="right">
+                            Equivalente contable:{" "}
+                            <strong style={{ color: "#0c8599" }}>
+                              $ {equivalenciaUsdCalculada.toLocaleString("es-ES", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              USD
+                            </strong>
+                          </Text>
+                        )}
+                      </>
+                    )}
+                  </Stack>
+                </Card>
+
+                <Textarea
+                  label="Observaciones"
+                  placeholder="Detalles adicionales, referencia bancaria..."
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  minRows={3}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
+              </Stack>
+            </Grid.Col>
+          </Grid>
+
+          <Divider my="xs" />
+
+          <Group justify="flex-end">
             <Button variant="outline" color="gray" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" loading={loading}>
+            <Button type="submit" color="teal" loading={loading}>
               Registrar Ingreso
             </Button>
           </Group>
@@ -412,3 +452,4 @@ export function RecibidaModal({
     </Modal>
   );
 }
+

@@ -153,7 +153,7 @@ async function fetchFilteredPatients({
     query = query.or(orConditions);
   }
 
-  query = query.order("nombres", { ascending: true });
+  query = query.order("created_at", { ascending: false });
 
   if (page !== undefined && pageSize !== undefined) {
     const from = (page - 1) * pageSize;

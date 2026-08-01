@@ -12,6 +12,8 @@ import {
   Group,
   Divider,
   Text,
+  Grid,
+  Card,
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { IconAlertCircle } from "@tabler/icons-react";
@@ -96,11 +98,12 @@ export function EntregadaModal({
       // Cargar Catálogos relacionales al abrir
       const loadRelations = async () => {
         try {
-          // 1. Pacientes
+          // 1. Pacientes (últimos 5 añadidos)
           const { data: pacData } = await supabase
             .from("pacientes")
             .select("id, nombres, apellidos")
-            .order("nombres", { ascending: true });
+            .order("created_at", { ascending: false })
+            .limit(5);
 
           setPacientes(pacData || []);
 
@@ -247,8 +250,8 @@ export function EntregadaModal({
       onClose={onClose}
       title="Registrar Donación Entregada (Egreso)"
       centered
+      size="xl"
       radius="md"
-      size="md"
       styles={{
         title: {
           fontWeight: 700,
@@ -264,251 +267,279 @@ export function EntregadaModal({
             </Alert>
           )}
 
-          <DateInput
-            label="Fecha de la Entrega"
-            placeholder="Seleccionar fecha"
-            required
-            value={fecha}
-            onChange={(val: any) => setFecha(val)}
-            maxDate={new Date()}
-            valueFormat="DD/MM/YYYY"
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
+          <Grid>
+            {/* Columna Izquierda: Destinatario y Datos de Entrega */}
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="sm">
+                <Text fw={700} size="sm" c="orange">
+                  1. Destinatario & Artículo
+                </Text>
 
-          <Radio.Group
-            label="Destinatario de la Ayuda"
-            required
-            value={destinatarioTipo}
-            onChange={(value) => setDestinatarioTipo(value)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 8,
-              },
-            }}
-          >
-            <Group gap="xl">
-              <Radio value="paciente" label="Paciente Oncológico" />
-              <Radio value="externo" label="Entidad / Beneficiario Externo" />
-            </Group>
-          </Radio.Group>
+                <DateInput
+                  label="Fecha de la Entrega"
+                  placeholder="Seleccionar fecha"
+                  required
+                  value={fecha}
+                  onChange={(val: any) => setFecha(val)}
+                  maxDate={new Date()}
+                  valueFormat="DD/MM/YYYY"
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
 
-          {destinatarioTipo === "paciente" ? (
-            <Select
-              label="Paciente Beneficiario"
-              placeholder="Buscar paciente por nombre..."
-              required
-              searchable
-              data={pacienteOptions}
-              value={idPaciente}
-              onChange={(value) => setIdPaciente(value)}  
-              styles={{
-                label: {  
-                  fontWeight: 600,
-                  color: "var(--anican-azul-oscuro)",
-                  marginBottom: 4,
-                },
-                input: { borderRadius: 8 },
-              }}
-            />
-          ) : (
-            <TextInput
-              label="Nombre del Beneficiario Externo"
-              placeholder="Ej. Hospital de Niños J.M. de los Ríos"
-              required
-              value={beneficiarioExterno}
-              onChange={(e) => setBeneficiarioExterno(e.target.value)}
-              styles={{
-                label: {
-                  fontWeight: 600,
-                  color: "var(--anican-azul-oscuro)",
-                  marginBottom: 4,
-                },
-                input: { borderRadius: 8 },
-              }}
-            />
-          )}
+                <Radio.Group
+                  label="Destinatario de la Ayuda"
+                  required
+                  value={destinatarioTipo}
+                  onChange={(value) => setDestinatarioTipo(value)}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 8,
+                    },
+                  }}
+                >
+                  <Group gap="md">
+                    <Radio value="paciente" label="Paciente" />
+                    <Radio value="externo" label="Beneficiario Externo" />
+                  </Group>
+                </Radio.Group>
+
+                {destinatarioTipo === "paciente" ? (
+                  <Select
+                    label="Paciente Beneficiario"
+                    placeholder="Buscar paciente..."
+                    required
+                    searchable
+                    data={pacienteOptions}
+                    value={idPaciente}
+                    onChange={(value) => setIdPaciente(value)}
+                    styles={{
+                      label: {
+                        fontWeight: 600,
+                        color: "var(--anican-azul-oscuro)",
+                        marginBottom: 4,
+                      },
+                      input: { borderRadius: 8 },
+                    }}
+                  />
+                ) : (
+                  <TextInput
+                    label="Nombre del Beneficiario Externo"
+                    placeholder="Ej. Hospital J.M. de los Ríos"
+                    required
+                    value={beneficiarioExterno}
+                    onChange={(e) => setBeneficiarioExterno(e.target.value)}
+                    styles={{
+                      label: {
+                        fontWeight: 600,
+                        color: "var(--anican-azul-oscuro)",
+                        marginBottom: 4,
+                      },
+                      input: { borderRadius: 8 },
+                    }}
+                  />
+                )}
+
+                <Select
+                  label="Artículo / Ayuda del Catálogo"
+                  placeholder="Seleccionar artículo"
+                  required
+                  searchable
+                  data={ayudaOptions}
+                  value={idAyuda}
+                  onChange={(value) => setIdAyuda(value)}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
+
+                <TextInput
+                  label="Cantidad / Unidades a Entregar"
+                  type="number"
+                  required
+                  value={cantidad}
+                  onChange={(e) => setCantidad(e.target.value)}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
+              </Stack>
+            </Grid.Col>
+
+            {/* Columna Derecha: Valoración Financiera, Soporte y Notas */}
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <Stack gap="sm">
+                <Text fw={700} size="sm" c="orange">
+                  2. Valoración & Soporte
+                </Text>
+
+                <Card withBorder radius="md" p="sm" bg="var(--anican-bg-card, #f8f9fa)">
+                  <Stack gap="xs">
+                    <Switch
+                      label="¿Registrar valoración financiera?"
+                      checked={esMonetario}
+                      onChange={(e) => setEsMonetario(e.currentTarget.checked)}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          color: "var(--anican-azul-oscuro)",
+                          fontSize: "13px",
+                        },
+                      }}
+                    />
+
+                    {esMonetario && (
+                      <>
+                        <Group grow gap="xs">
+                          <NumberInput
+                            label="Monto Entregado"
+                            placeholder="Ej. 100"
+                            required
+                            min={0}
+                            decimalScale={2}
+                            value={montoOriginal}
+                            onChange={(value) => setMontoOriginal(value)}
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: { borderRadius: 8 },
+                            }}
+                          />
+
+                          <Select
+                            label="Moneda"
+                            required
+                            data={[
+                              { value: "USD", label: "Dólares (USD)" },
+                              { value: "VES", label: "Bolívares (VES)" },
+                              { value: "COP", label: "Pesos (COP)" },
+                            ]}
+                            value={moneda}
+                            onChange={(value) => setMoneda(value)}
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: { borderRadius: 8 },
+                            }}
+                          />
+                        </Group>
+
+                        {moneda !== "USD" ? (
+                          <TextInput
+                            label="Tasa de Cambio Aplicada"
+                            value={`1 USD = ${Number(tasaCambio).toFixed(4)} ${moneda}`}
+                            readOnly
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: {
+                                borderRadius: 8,
+                                backgroundColor: "var(--anican-bg)",
+                                fontWeight: 600,
+                              },
+                            }}
+                          />
+                        ) : (
+                          <TextInput
+                            label="Valor Contable (USD)"
+                            value={`$ ${numOrig.toFixed(2)} USD`}
+                            readOnly
+                            styles={{
+                              label: {
+                                fontWeight: 600,
+                                color: "var(--anican-azul-oscuro)",
+                                marginBottom: 4,
+                              },
+                              input: { borderRadius: 8, backgroundColor: "var(--anican-bg)" },
+                            }}
+                          />
+                        )}
+
+                        {moneda !== "USD" && (
+                          <Text size="xs" c="dimmed" fw={600} ta="right">
+                            Equivalente contable:{" "}
+                            <strong style={{ color: "#e87319" }}>
+                              $ {equivalenciaUsdCalculada.toLocaleString("es-ES", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}{" "}
+                              USD
+                            </strong>
+                          </Text>
+                        )}
+                      </>
+                    )}
+
+                    <Divider my={4} />
+
+                    <Switch
+                      label="¿Cuenta con soporte físico? (Factura/recibo)"
+                      checked={conSoporte}
+                      onChange={(e) => setConSoporte(e.currentTarget.checked)}
+                      styles={{
+                        label: {
+                          fontWeight: 600,
+                          color: "var(--anican-azul-oscuro)",
+                          fontSize: "12px",
+                        },
+                      }}
+                    />
+                  </Stack>
+                </Card>
+
+                <Textarea
+                  label="Observaciones"
+                  placeholder="Aclaratorias, dosificación, número de factura..."
+                  value={observaciones}
+                  onChange={(e) => setObservaciones(e.target.value)}
+                  minRows={3}
+                  styles={{
+                    label: {
+                      fontWeight: 600,
+                      color: "var(--anican-azul-oscuro)",
+                      marginBottom: 4,
+                    },
+                    input: { borderRadius: 8 },
+                  }}
+                />
+              </Stack>
+            </Grid.Col>
+          </Grid>
 
           <Divider my="xs" />
 
-          <Select
-            label="Artículo / Ayuda del Catálogo"
-            placeholder="Seleccionar artículo"
-            required
-            searchable
-            data={ayudaOptions}
-            value={idAyuda}
-            onChange={(value) => setIdAyuda(value)}  
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <TextInput
-            label="Cantidad / Unidades a Entregar"
-            type="number"
-            required
-            value={cantidad}
-            onChange={(e) => setCantidad(e.target.value)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <Switch
-            label="¿Registrar costo / valoración financiera de la entrega?"
-            checked={esMonetario}
-            onChange={(e) => setEsMonetario(e.currentTarget.checked)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-              },
-            }}
-          />
-
-          {esMonetario && (
-            <Stack gap="xs">
-              <Group grow>
-                <NumberInput
-                  label="Monto a Entregar (Original)"
-                  placeholder="Ej. 100"
-                  required
-                  min={0}
-                  decimalScale={2}
-                  value={montoOriginal}
-                  onChange={(value) => setMontoOriginal(value)}  
-                  styles={{
-                    label: {
-                      fontWeight: 600,
-                      color: "var(--anican-azul-oscuro)",
-                      marginBottom: 4,
-                    },
-                    input: { borderRadius: 8 },
-                  }}
-                />
-
-                <Select
-                  label="Moneda"
-                  required
-                  data={[
-                    { value: "USD", label: "Dólares (USD)" },
-                    { value: "VES", label: "Bolívares (VES)" },
-                    { value: "COP", label: "Pesos (COP)" },
-                  ]}
-                  value={moneda}
-                  onChange={(value) => setMoneda(value)}
-                  styles={{
-                    label: {
-                      fontWeight: 600,
-                      color: "var(--anican-azul-oscuro)",
-                      marginBottom: 4,
-                    },
-                    input: { borderRadius: 8 },
-                  }}
-                />
-              </Group>
-
-              {moneda !== "USD" ? (
-                <TextInput
-                  label="Tasa de Cambio Aplicada"
-                  value={`1 USD = ${Number(tasaCambio).toFixed(4)} ${moneda}`}
-                  readOnly
-                  styles={{
-                    label: {
-                      fontWeight: 600,
-                      color: "var(--anican-azul-oscuro)",
-                      marginBottom: 4,
-                    },
-                    input: {
-                      borderRadius: 8,
-                      backgroundColor: "var(--anican-bg)",
-                      fontWeight: 600,
-                    },
-                  }}
-                />
-              ) : (
-                <TextInput
-                  label="Valor Contable (USD)"
-                  value={`$ ${numOrig.toFixed(2)} USD`}
-                  readOnly
-                  styles={{
-                    label: {
-                      fontWeight: 600,
-                      color: "var(--anican-azul-oscuro)",
-                      marginBottom: 4,
-                    },
-                    input: { borderRadius: 8, backgroundColor: "var(--anican-bg)" },
-                  }}
-                />
-              )}
-
-              {moneda !== "USD" && (
-                <Text size="xs" c="dimmed" fw={600} ta="right" mt={-2}>
-                  Equivalente contable:{" "}
-                  <strong style={{ color: "green" }}>
-                    $ {equivalenciaUsdCalculada.toLocaleString("es-ES", {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}{" "}
-                    USD
-                  </strong>
-                </Text>
-              )}
-            </Stack>
-          )}
-
-          <Switch
-            label="¿Cuenta con soporte físico? (Factura, recibo, constancia firmada)"
-            checked={conSoporte}
-            onChange={(e) => setConSoporte(e.currentTarget.checked)}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-              },
-            }}
-          />
-
-          <Textarea
-            label="Observaciones"
-            placeholder="Aclaratorias, dosificación, concepto o número de factura..."
-            value={observaciones}
-            onChange={(e) => setObservaciones(e.target.value)}
-            minRows={3}
-            styles={{
-              label: {
-                fontWeight: 600,
-                color: "var(--anican-azul-oscuro)",
-                marginBottom: 4,
-              },
-              input: { borderRadius: 8 },
-            }}
-          />
-
-          <Group justify="flex-end" mt="md">
+          <Group justify="flex-end">
             <Button variant="outline" color="gray" onClick={onClose} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" loading={loading}>
+            <Button type="submit" color="orange" loading={loading}>
               Registrar Egreso
             </Button>
           </Group>
@@ -517,3 +548,4 @@ export function EntregadaModal({
     </Modal>
   );
 }
+

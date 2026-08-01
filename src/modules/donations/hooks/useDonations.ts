@@ -197,18 +197,18 @@ export function useDonations({
   });
 
   // 2. Query para KPIs agregados globales
-  const { data: stats = { totalEntregadoMonetario: 0, totalRecibidoMonetario: 0, totalRecibidasCount: 0, totalEntregadasCount: 0 }, isLoading: loadingStats } = useQuery({
+  const { data: stats = { totalEntregadoMonetario: 0, totalRecibidoMonetario: 0, totalRecibidasCount: 0, totalEntregadasCount: 0, allRecibidasStats: [], allEntregadasStats: [] }, isLoading: loadingStats } = useQuery({
     queryKey: ["donations_stats"],
     queryFn: async () => {
       const { data: recData, error: recError } = await supabase
         .from("donaciones_recibidas")
-        .select("monto_equivalente_usd");
+        .select("fecha, created_at, monto_equivalente_usd");
 
       if (recError) throw recError;
 
       const { data: entData, error: entError } = await supabase
         .from("donaciones_entregadas")
-        .select("monto_equivalente");
+        .select("fecha, created_at, monto_equivalente");
 
       if (entError) throw entError;
 
@@ -229,6 +229,8 @@ export function useDonations({
         totalRecibidoMonetario,
         totalRecibidasCount,
         totalEntregadasCount,
+        allRecibidasStats: (recData || []) as Array<{ fecha?: string; created_at?: string; monto_equivalente_usd?: number }>,
+        allEntregadasStats: (entData || []) as Array<{ fecha?: string; created_at?: string; monto_equivalente?: number }>,
       };
     },
   });

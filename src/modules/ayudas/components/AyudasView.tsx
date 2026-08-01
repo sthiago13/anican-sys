@@ -86,7 +86,7 @@ export function AyudasView() {
             Catálogo de Ayudas
           </Title>
           <Text c="dimmed">
-            Administra los medicamentos, insumos, servicios y apoyos económicos de la fundación
+            Administra la categorizacion de las ayudas que ofrece la fundación
           </Text>
         </div>
         <Button

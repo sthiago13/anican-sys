@@ -1,7 +1,6 @@
 import React from "react";
 import { Menu, type MantineColor } from "@mantine/core";
 import {
-  IconDownload,
   IconFileSpreadsheet,
   IconFileTypeCsv,
 } from "@tabler/icons-react";
@@ -21,16 +20,16 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
   loading = false,
   disabled = false,
   color = "teal",
-  variant = "outline",
-  label = "Exportar",
+  variant = "light",
+  label = "Exportar Reporte",
 }) => {
   return (
-    <Menu shadow="md" width={180} position="bottom-end">
+    <Menu shadow="md" width={190} position="bottom-end">
       <Menu.Target>
         <Button
           variant={variant}
           color={color}
-          leftSection={<IconDownload size={16} />}
+          leftSection={<IconFileSpreadsheet size={18} />}
           loading={loading}
           disabled={disabled}
         >
@@ -38,7 +37,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
         </Button>
       </Menu.Target>
       <Menu.Dropdown>
-        <Menu.Label>Formato de descarga</Menu.Label>
+        <Menu.Label>Formato de exportación</Menu.Label>
         <Menu.Item
           leftSection={<IconFileSpreadsheet size={16} />}
           onClick={() => void onExport("excel")}
@@ -55,3 +54,4 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
     </Menu>
   );
 };
+
