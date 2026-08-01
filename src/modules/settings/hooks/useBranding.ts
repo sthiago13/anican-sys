@@ -110,8 +110,30 @@ export function useBranding() {
     }
   };
 
+  const getStoragePathFromUrl = (url: string | null): string | null => {
+    if (!url) return null;
+    try {
+      const parts = url.split('/branding/');
+      if (parts.length > 1) {
+        return decodeURIComponent(parts[1].split('?')[0]);
+      }
+    } catch (e) {
+      console.error('Error al extraer el path del archivo de branding:', e);
+    }
+    return null;
+  };
+
   const uploadImage = async (file: File, type: 'logo' | 'favicon'): Promise<string> => {
     try {
+      // 1. Extraer y eliminar la imagen previa si existe en el bucket de storage
+      const currentUrl = type === 'logo' ? branding.logo_url : branding.favicon_url;
+      const oldStoragePath = getStoragePathFromUrl(currentUrl);
+
+      if (oldStoragePath) {
+        await supabase.storage.from('branding').remove([oldStoragePath]);
+      }
+
+      // 2. Subir la nueva imagen al bucket
       const fileExt = file.name.split('.').pop()?.toLowerCase() || 'png';
       const fileName = `${type}_${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
@@ -133,7 +155,7 @@ export function useBranding() {
 
       const publicUrl = publicUrlData.publicUrl;
 
-      // Actualizar la columna correspondiente en la base de datos
+      // 3. Actualizar la columna correspondiente en la base de datos
       const fieldToUpdate = type === 'logo' ? { logo_url: publicUrl } : { favicon_url: publicUrl };
       await updateBranding(fieldToUpdate);
 

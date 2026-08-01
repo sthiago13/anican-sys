@@ -84,7 +84,7 @@ export const Login: React.FC = () => {
         width: "100vw",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: "var(--anican-bg)",
+        backgroundColor: "var(--anican-bg-login)",
         padding: 20,
       }}
     >
@@ -97,7 +97,6 @@ export const Login: React.FC = () => {
           borderRadius: 16,
           overflow: "hidden",
           boxShadow: "var(--anican-shadow-lg)",
-          border: "1px solid var(--anican-border)",
         }}
       >
         {/* Formulario de Login */}
@@ -249,7 +248,7 @@ export const Login: React.FC = () => {
             flex: 1,
             position: "relative",
             background:
-              "linear-gradient(135deg, var(--anican-azul-oscuro) 0%, var(--anican-azul-medio) 100%)",
+              "linear-gradient(135deg, var(--anican-azul-bg) 0%, color-mix(in srgb, var(--anican-azul-bg), black 15%) 100%)",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",

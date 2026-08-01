@@ -6,19 +6,20 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 :root {
-  /* Paleta Institucional Anican */
+  /* Paleta Institucional Anican f58b05*/
   --anican-naranja: #f58b05;
   --anican-naranja-hover: #e07e00;
   --anican-naranja-light: rgba(245, 139, 5, 0.1);
   --anican-azul-claro: #7fbbdd;
   --anican-azul-claro-light: rgba(127, 187, 221, 0.12);
   --anican-azul-oscuro: #1a365d;
-  --anican-azul-medio: #2b4c7e;
+  --anican-azul-bg: #2b4c7e;
   --anican-amarillo: #ffc22f;
   --anican-amarillo-light: rgba(255, 194, 47, 0.12);
 
   /* Neutrales */
   --anican-bg: #f8f9fa;
+  --anican-bg-login: #24262b ;
   --anican-bg-card: #ffffff;
   --anican-border: #e2e8f0;
   --anican-text: #4a5568;
@@ -61,10 +62,11 @@
   --anican-azul-claro: #90caf9;
   --anican-azul-claro-light: rgba(144, 202, 249, 0.15);
   --anican-azul-oscuro: #e3f2fd;
-  --anican-azul-medio: #90caf9;
+  --anican-azul-bg: #1a365d;
 
   /* Neutrales para Modo Oscuro */
   --anican-bg: #141517;
+  --anican-bg-login: #141517;
   --anican-bg-card: #1c1d21;
   --anican-border: #2d3035;
   --anican-text: #c1c2c5;
@@ -356,7 +358,7 @@ p {
   /* Ajustar el layout principal para ocupar 100% de la página */
   body, #root, main, .mantine-AppShell-main, .printable-report, aside + div {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #1e293b !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
@@ -369,6 +371,24 @@ p {
   .print-header {
     display: block !important;
     margin-bottom: 2rem !important;
+  }
+
+  /* Preservar legibilidad y colores específicos en tarjetas estadísticas */
+  .printable-report .mantine-Paper-root,
+  .printable-report .mantine-Card-root {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+
+  .printable-report .mantine-Text-root[data-dimmed] {
+    color: #64748b !important;
+  }
+
+  .printable-report h1,
+  .printable-report h2,
+  .printable-report h3,
+  .printable-report .mantine-Title-root {
+    color: #1a365d !important;
   }
 
   /* Forzar impresión de colores de fondo en gráficos y tarjetas */

@@ -28,6 +28,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../../../components/UI/StatCard";
 import { useReportsData } from "../hooks/useReportsData";
+import { useBranding } from "../../settings/hooks/useBranding";
 import { FinancialsChart } from "./FinancialsChart";
 import { DistributionChart } from "./DistributionChart";
 import { DemographicsChart } from "./DemographicsChart";
@@ -38,6 +39,7 @@ import { type ReportFinancialPoint } from "../types";
 
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
+  const { branding } = useBranding();
   const {
     loading,
     fechaInicio,
@@ -93,7 +95,7 @@ export const ReportsView: React.FC = () => {
 
     // Hoja 1: Resumen Ejecutivo
     const resumenData = [
-      ["FUNDACIÓN ANICAN", ""],
+      [(branding.nombre_fundacion || "FUNDACIÓN ANICAN").toUpperCase(), ""],
       ["Reporte de Gestión - Resumen Ejecutivo", ""],
       ["Periodo:", getFormattedPeriod()],
       ["Fecha de Generación:", dayjs().format("DD/MM/YYYY hh:mm A")],
@@ -244,17 +246,26 @@ export const ReportsView: React.FC = () => {
           ------------------------------------------------------------- */}
       <Box className="print-header" style={{ display: "none" }} mb="xl">
         <Group justify="space-between" align="flex-start" style={{ borderBottom: "2px solid #1a365d", paddingBottom: 15 }}>
-          <div>
-            <Title order={1} style={{ color: "#1a365d", fontSize: 24, fontWeight: 800 }}>
-              FUNDACIÓN ANICAN
-            </Title>
-            <Text size="sm" fw={600} style={{ color: "#e07e00" }}>
-              Ayuda a Niños con Cáncer
-            </Text>
-            <Text size="xs" c="dimmed">
-              R.I.F: J-40810232-0 | San Cristóbal, Táchira
-            </Text>
-          </div>
+          <Group gap="md" align="center">
+            {branding.logo_url && (
+              <img
+                src={branding.logo_url}
+                alt={branding.nombre_fundacion}
+                style={{ height: 54, width: "auto", objectFit: "contain" }}
+              />
+            )}
+            <div>
+              <Title order={1} style={{ color: "#1a365d", fontSize: 22, fontWeight: 800 }}>
+                {branding.nombre_fundacion || "FUNDACIÓN ANICAN"}
+              </Title>
+              <Text size="sm" fw={600} style={{ color: "#e07e00" }}>
+                Ayuda a Niños con Cáncer
+              </Text>
+              <Text size="xs" c="dimmed">
+                R.I.F: {branding.rif || "J-00000000-0"} {branding.direccion ? `| ${branding.direccion}` : ""} {branding.correo ? `| ${branding.correo}` : ""}
+              </Text>
+            </div>
+          </Group>
           <div style={{ textAlign: "right" }}>
             <Title order={3} style={{ color: "#1a365d", fontSize: 16 }}>
               Reporte Analítico e Histórico de Gestión
