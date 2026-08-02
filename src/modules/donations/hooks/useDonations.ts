@@ -393,9 +393,13 @@ export function useDonations({
   // Mutación para aprobar una donación pendiente
   const aprobarPendienteMutation = useMutation({
     mutationFn: async ({ id }: { id: string }) => {
+      if (!user?.id) {
+        throw new Error("La sesión del usuario no está disponible.");
+      }
+
       const { error } = await supabase.rpc("aprobar_donacion_pendiente", {
         p_id_pendiente: id,
-        p_registrado_por: user?.id || null,
+        p_registrado_por: user.id,
       });
       if (error) throw error;
     },
@@ -410,9 +414,13 @@ export function useDonations({
   // Mutación para rechazar una donación pendiente
   const rechazarPendienteMutation = useMutation({
     mutationFn: async ({ id, motivo }: { id: string; motivo?: string }) => {
+      if (!user?.id) {
+        throw new Error("La sesión del usuario no está disponible.");
+      }
+
       const { error } = await supabase.rpc("rechazar_donacion_pendiente", {
         p_id_pendiente: id,
-        p_registrado_por: user?.id || null,
+        p_registrado_por: user.id,
         p_motivo: motivo || null,
       });
       if (error) throw error;
