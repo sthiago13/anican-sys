@@ -11,7 +11,11 @@ import {
   Paper,
   Divider,
   Alert,
+  TextInput,
+  Select,
+  NumberInput,
 } from "@mantine/core";
+import { DateInput } from "@mantine/dates";
 import {
   IconCheck,
   IconX,
@@ -23,7 +27,11 @@ import {
   IconUser,
   IconFileText,
 } from "@tabler/icons-react";
-import { type DonacionPendiente } from "../types";
+import {
+  type DestinoDonacionPublico,
+  type DonacionPendiente,
+  type DonacionPendienteEdicion,
+} from "../types";
 
 interface VerificarPendienteModalProps {
   opened: boolean;
@@ -31,6 +39,8 @@ interface VerificarPendienteModalProps {
   donacion: DonacionPendiente | null;
   onAprobar: (id: string) => Promise<void>;
   onRechazar: (id: string, motivo?: string) => Promise<void>;
+  onEditar: (id: string, edicion: DonacionPendienteEdicion) => Promise<void>;
+  destinos: DestinoDonacionPublico[];
 }
 
 export const VerificarPendienteModal: React.FC<VerificarPendienteModalProps> = ({
@@ -39,12 +49,33 @@ export const VerificarPendienteModal: React.FC<VerificarPendienteModalProps> = (
   donacion,
   onAprobar,
   onRechazar,
+  onEditar,
+  destinos,
 }) => {
+  const initialDate = donacion
+    ? (() => {
+        const [year, month, day] = donacion.fecha.split("-").map(Number);
+        return new Date(year, month - 1, day);
+      })()
+    : null;
   const [loadingAprobar, setLoadingAprobar] = useState(false);
   const [loadingRechazar, setLoadingRechazar] = useState(false);
   const [showRechazarInput, setShowRechazarInput] = useState(false);
   const [motivoRechazo, setMotivoRechazo] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editFecha, setEditFecha] = useState<Date | null>(initialDate);
+  const [editEntidad, setEditEntidad] = useState(donacion?.entidad_donante || "");
+  const [editMetodo, setEditMetodo] = useState(donacion?.metodo_ingreso || "");
+  const [editMontoCantidad, setEditMontoCantidad] = useState(donacion?.monto_o_cantidad || "");
+  const [editMoneda, setEditMoneda] = useState(donacion?.moneda || "USD");
+  const [editMontoOriginal, setEditMontoOriginal] = useState<number | string>(donacion?.monto_original ?? "");
+  const [editReferencia, setEditReferencia] = useState(donacion?.referencia || "");
+  const [editDestinoId, setEditDestinoId] = useState<string | null>(donacion?.destino_donacion_id || null);
+  const [editDestino, setEditDestino] = useState(donacion?.destino_donacion || "");
+  const [editObservaciones, setEditObservaciones] = useState(donacion?.observaciones || "");
+  const [editMotivo, setEditMotivo] = useState("");
+  const [loadingEditar, setLoadingEditar] = useState(false);
 
   if (!donacion) return null;
 
@@ -52,7 +83,42 @@ export const VerificarPendienteModal: React.FC<VerificarPendienteModalProps> = (
     setShowRechazarInput(false);
     setMotivoRechazo("");
     setErrorMessage(null);
+    setEditing(false);
     onClose();
+  };
+
+  const handleEditSubmit = async () => {
+    if (!editFecha || !editEntidad.trim() || !editMontoCantidad.trim()) {
+      setErrorMessage("Completa la fecha, el donante y el monto o descripción.");
+      return;
+    }
+
+    try {
+      setErrorMessage(null);
+      setLoadingEditar(true);
+      const fecha = [editFecha.getFullYear(), editFecha.getMonth() + 1, editFecha.getDate()]
+        .map((value, index) => index === 0 ? String(value) : String(value).padStart(2, "0"))
+        .join("-");
+
+      await onEditar(donacion.id, {
+        fecha,
+        entidad_donante: editEntidad.trim(),
+        metodo_ingreso: editMetodo.trim(),
+        monto_o_cantidad: editMontoCantidad.trim(),
+        moneda: editMoneda,
+        monto_original: editMontoOriginal === "" ? null : Number(editMontoOriginal),
+        referencia: editReferencia.trim(),
+        destino_donacion_id: editDestinoId,
+        destino_donacion: editDestino.trim(),
+        observaciones: editObservaciones.trim(),
+        motivo: editMotivo.trim(),
+      });
+      handleModalClose();
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "No se pudo guardar la edición.");
+    } finally {
+      setLoadingEditar(false);
+    }
   };
 
   const handleAprobarSubmit = async () => {
@@ -207,12 +273,73 @@ export const VerificarPendienteModal: React.FC<VerificarPendienteModalProps> = (
           </Paper>
         )}
 
+        {donacion.destino_donacion && (
+          <Paper p="xs" radius="sm" withBorder style={{ backgroundColor: "var(--anican-bg)" }}>
+            <Text fw={600} size="xs" c="dimmed" mb={2}>Destino informado:</Text>
+            <Text size="sm">{donacion.destino_donacion}</Text>
+          </Paper>
+        )}
+
+        {editing && donacion.estado === "Pendiente" && (
+          <Paper p="md" radius="sm" withBorder>
+            <Stack gap="sm">
+              <Text fw={700} c="var(--anican-azul-oscuro)">Corregir información antes de aprobar</Text>
+              <TextInput label="Donante" value={editEntidad} onChange={(event) => setEditEntidad(event.currentTarget.value)} required />
+              <Grid>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <DateInput
+                    label="Fecha"
+                    value={editFecha ? editFecha.toISOString().slice(0, 10) : null}
+                    onChange={(value) => setEditFecha(value ? new Date(`${value}T00:00:00`) : null)}
+                    valueFormat="DD/MM/YYYY"
+                    required
+                  />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <TextInput label="Método de ingreso" value={editMetodo} onChange={(event) => setEditMetodo(event.currentTarget.value)} />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, sm: 6 }}>
+                  <TextInput label="Monto o descripción" value={editMontoCantidad} onChange={(event) => setEditMontoCantidad(event.currentTarget.value)} required />
+                </Grid.Col>
+                <Grid.Col span={{ base: 6, sm: 3 }}>
+                  <Select label="Moneda" data={["USD", "VES", "COP"]} value={editMoneda} onChange={(value) => setEditMoneda(value || "USD")} />
+                </Grid.Col>
+                <Grid.Col span={{ base: 6, sm: 3 }}>
+                  <NumberInput label="Monto numérico" value={editMontoOriginal} onChange={setEditMontoOriginal} min={0} decimalScale={2} />
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <TextInput label="Referencia" value={editReferencia} onChange={(event) => setEditReferencia(event.currentTarget.value)} />
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Select
+                    label="Destino de donación"
+                    placeholder="Selecciona un destino"
+                    clearable
+                    data={destinos.map((destino) => ({ value: destino.id, label: `${destino.emoji || "💛"} ${destino.nombre}` }))}
+                    value={editDestinoId}
+                    onChange={(value) => {
+                      setEditDestinoId(value);
+                      setEditDestino(destinos.find((destino) => destino.id === value)?.nombre || "");
+                    }}
+                  />
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Textarea label="Observaciones" value={editObservaciones} onChange={(event) => setEditObservaciones(event.currentTarget.value)} autosize minRows={2} />
+                </Grid.Col>
+                <Grid.Col span={12}>
+                  <Textarea label="Motivo de la corrección" placeholder="Opcional, recomendado para auditoría" value={editMotivo} onChange={(event) => setEditMotivo(event.currentTarget.value)} autosize minRows={2} />
+                </Grid.Col>
+              </Grid>
+            </Stack>
+          </Paper>
+        )}
+
         <Divider />
 
         {/* Sección de acciones si está en estado Pendiente */}
         {donacion.estado === "Pendiente" ? (
           <Stack gap="xs">
-            {showRechazarInput && (
+            {showRechazarInput && !editing && (
               <Textarea
                 placeholder="Indique la razón o motivo del rechazo (opcional)"
                 label="Motivo del Rechazo"
@@ -224,11 +351,23 @@ export const VerificarPendienteModal: React.FC<VerificarPendienteModalProps> = (
             )}
 
             <Group justify="flex-end" gap="sm">
-              <Button variant="default" onClick={handleModalClose} disabled={loadingAprobar || loadingRechazar}>
+              <Button variant="default" onClick={handleModalClose} disabled={loadingAprobar || loadingRechazar || loadingEditar}>
                 Cancelar
               </Button>
 
-              {!showRechazarInput ? (
+              {!editing && (
+                <Button variant="light" color="blue" onClick={() => setEditing(true)} disabled={loadingAprobar || loadingRechazar}>
+                  Editar información
+                </Button>
+              )}
+
+              {editing && (
+                <Button color="blue" onClick={handleEditSubmit} loading={loadingEditar}>
+                  Guardar cambios
+                </Button>
+              )}
+
+              {!editing && (!showRechazarInput ? (
                 <Button
                   color="red"
                   variant="light"
@@ -247,16 +386,16 @@ export const VerificarPendienteModal: React.FC<VerificarPendienteModalProps> = (
                 >
                   Confirmar Rechazo
                 </Button>
-              )}
+              ))}
 
-              <Button
+              {!editing && <Button
                 color="teal"
                 leftSection={<IconCheck size={16} />}
                 onClick={handleAprobarSubmit}
                 loading={loadingAprobar}
               >
                 Aprobar e Ingresar
-              </Button>
+              </Button>}
             </Group>
           </Stack>
         ) : (

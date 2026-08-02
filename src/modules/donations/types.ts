@@ -11,6 +11,9 @@ export interface DonacionRecibida {
   tasa_cambio?: number;
   monto_equivalente_usd?: number;
   id_ayuda: string;
+  referencia?: string;
+  destino_donacion_id?: string;
+  destino_donacion?: string;
 
   // Relacionales del Frontend
   catalogo_ayudas?: {
@@ -64,7 +67,6 @@ export interface DonacionPendiente {
   metodo_ingreso?: string;
   monto_o_cantidad: string;
   observaciones?: string;
-  referencia?: string;
   estado: 'Pendiente' | 'Aprobado' | 'Rechazado';
   procesado_por?: string;
   fecha_procesado?: string;
@@ -74,12 +76,38 @@ export interface DonacionPendiente {
   tasa_cambio?: number;
   monto_equivalente_usd?: number;
   id_ayuda?: string;
+  referencia?: string;
+  destino_donacion_id?: string;
+  destino_donacion?: string;
 
   // Relacionales del Frontend
   catalogo_ayudas?: {
     nombre_articulo: string;
     categoria: string;
   };
+}
+
+export interface DestinoDonacionPublico {
+  id: string;
+  nombre: string;
+  descripcion?: string;
+  emoji?: string;
+  orden?: number;
+  activo?: boolean;
+}
+
+export interface DonacionPendienteEdicion {
+  fecha: string;
+  entidad_donante: string;
+  metodo_ingreso: string;
+  monto_o_cantidad: string;
+  moneda: string;
+  monto_original: number | null;
+  referencia: string;
+  destino_donacion_id: string | null;
+  destino_donacion: string;
+  observaciones: string;
+  motivo: string;
 }
 
 export interface PendientesFilters {

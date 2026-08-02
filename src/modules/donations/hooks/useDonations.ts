@@ -5,6 +5,8 @@ import {
   type DonacionRecibida, 
   type DonacionEntregada, 
   type DonacionPendiente,
+  type DonacionPendienteEdicion,
+  type DestinoDonacionPublico,
   type RecibidasFilters, 
   type EntregadasFilters,
   type PendientesFilters 
@@ -270,6 +272,21 @@ export function useDonations({
     staleTime: 1000 * 60 * 10,
   });
 
+  const { data: destinosDonacion = [] } = useQuery({
+    queryKey: ["destinos_donacion_publicos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("destinos_donacion_publicos")
+        .select("id, nombre, descripcion, emoji, orden, activo")
+        .eq("activo", true)
+        .order("orden", { ascending: true });
+
+      if (error) throw error;
+      return (data || []) as DestinoDonacionPublico[];
+    },
+    staleTime: 1000 * 60 * 10,
+  });
+
   // 2. Query para KPIs agregados globales
   const { data: stats = { totalEntregadoMonetario: 0, totalRecibidoMonetario: 0, totalRecibidasCount: 0, totalEntregadasCount: 0, allRecibidasStats: [], allEntregadasStats: [] }, isLoading: loadingStats } = useQuery({
     queryKey: ["donations_stats"],
@@ -432,6 +449,36 @@ export function useDonations({
     },
   });
 
+  const editarPendienteMutation = useMutation({
+    mutationFn: async ({ id, edicion }: { id: string; edicion: DonacionPendienteEdicion }) => {
+      if (!user?.id) {
+        throw new Error("La sesión del usuario no está disponible.");
+      }
+
+      const { error } = await supabase.rpc("actualizar_donacion_pendiente", {
+        p_id_pendiente: id,
+        p_registrado_por: user.id,
+        p_fecha: edicion.fecha,
+        p_entidad_donante: edicion.entidad_donante,
+        p_metodo_ingreso: edicion.metodo_ingreso || null,
+        p_monto_o_cantidad: edicion.monto_o_cantidad,
+        p_moneda: edicion.moneda,
+        p_monto_original: edicion.monto_original,
+        p_referencia: edicion.referencia || null,
+        p_destino_donacion_id: edicion.destino_donacion_id,
+        p_destino_donacion: edicion.destino_donacion || null,
+        p_observaciones: edicion.observaciones || null,
+        p_motivo: edicion.motivo || null,
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["donaciones_pendientes"] });
+      void queryClient.invalidateQueries({ queryKey: ["donaciones_pendientes_badge_count"] });
+    },
+  });
+
   // 4. Mutación para guardar donación recibida
   const saveRecibidaMutation = useMutation({
     mutationFn: async (vars: {
@@ -568,6 +615,10 @@ export function useDonations({
     await rechazarPendienteMutation.mutateAsync({ id, motivo });
   };
 
+  const handleEditarPendiente = async (id: string, edicion: DonacionPendienteEdicion) => {
+    await editarPendienteMutation.mutateAsync({ id, edicion });
+  };
+
   // Obtener donaciones recibidas filtradas sin paginación
   const fetchExportRecibidas = async (): Promise<DonacionRecibida[]> => {
     const { data, error } = await fetchFilteredDonacionesRecibidas({
@@ -610,7 +661,8 @@ export function useDonations({
     saveRecibidaMutation.isPending ||
     saveEntregadaMutation.isPending ||
     aprobarPendienteMutation.isPending ||
-    rechazarPendienteMutation.isPending;
+    rechazarPendienteMutation.isPending ||
+    editarPendienteMutation.isPending;
 
   return {
     recibidas,
@@ -620,6 +672,7 @@ export function useDonations({
     totalCountPendientes,
     totalPagesPendientes,
     ayudas,
+    destinosDonacion,
     loading,
     totalCountRecibidas,
     totalPagesRecibidas,
@@ -630,6 +683,7 @@ export function useDonations({
     handleSaveEntregada,
     handleAprobarPendiente,
     handleRechazarPendiente,
+    handleEditarPendiente,
     fetchExportRecibidas,
     fetchExportEntregadas,
   };

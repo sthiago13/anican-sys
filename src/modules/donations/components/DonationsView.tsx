@@ -199,6 +199,8 @@ export function DonationsView() {
     handleSaveEntregada,
     handleAprobarPendiente,
     handleRechazarPendiente,
+    handleEditarPendiente,
+    destinosDonacion,
     fetchExportRecibidas,
     fetchExportEntregadas,
   } = useDonations({
@@ -699,6 +701,11 @@ export function DonationsView() {
                             </Table.Td>
                             <Table.Td>
                               <Text size="sm" fw={600}>{p.monto_o_cantidad}</Text>
+                              {p.destino_donacion && (
+                                <Text size="xs" c="dimmed" mt={2}>
+                                  Destino: {p.destino_donacion}
+                                </Text>
+                              )}
                               {p.monto_equivalente_usd != null && (
                                 <Text size="xs" c="teal" fw={700}>
                                   ${p.monto_equivalente_usd.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD
@@ -1151,6 +1158,7 @@ export function DonationsView() {
       />
 
       <VerificarPendienteModal
+        key={selectedPendiente?.id ?? "sin-seleccion"}
         opened={modalVerificarOpened}
         onClose={() => {
           setModalVerificarOpened(false);
@@ -1159,6 +1167,8 @@ export function DonationsView() {
         donacion={selectedPendiente}
         onAprobar={handleAprobarPendiente}
         onRechazar={handleRechazarPendiente}
+        onEditar={handleEditarPendiente}
+        destinos={destinosDonacion}
       />
     </Stack>
   );
