@@ -50,3 +50,43 @@ pnpm run dev
 ```
 
 Abre tu navegador, entra a la dirección local e inicia sesión con las credenciales por defecto (`admin@anican.org` / `admin12345`).
+
+## Continuidad de Supabase en el plan Free
+
+El workflow `.github/workflows/supabase-keep-alive.yml` consulta diariamente la función `anican_keep_alive()` mediante GitHub Actions. La función no modifica datos de negocio; solo confirma que la API y la base de datos responden.
+
+Configura estos secretos en el repositorio de GitHub:
+
+- `SUPABASE_URL`: URL pública del proyecto.
+- `SUPABASE_ANON_KEY`: clave pública anon del proyecto.
+
+El workflow puede ejecutarse manualmente desde la pestaña **Actions** para comprobar la configuración. Esta mitigación depende de GitHub Actions y no sustituye un plan de Supabase sin pausa automática.
+
+## Donaciones públicas
+
+La landing debe enviar las donaciones a la Edge Function `registrar-donacion-publica`; la tabla `donaciones_pendientes` no acepta inserciones anónimas directas.
+
+Configura el secreto de rate limiting y despliega la función:
+
+```bash
+pnpm exec supabase secrets set PUBLIC_DONATION_RATE_LIMIT_SALT="una-cadena-secreta-larga"
+pnpm exec supabase functions deploy registrar-donacion-publica
+```
+
+El `SUPABASE_SERVICE_ROLE_KEY` es inyectado por Supabase en la Edge Function y nunca debe configurarse en Vercel, el navegador ni GitHub Actions.
+
+## Pruebas RLS con JWT
+
+La prueba remota usa únicamente la clave `anon` y credenciales temporales de un Voluntario y un Administrador:
+
+```bash
+SUPABASE_URL=https://tu-proyecto.supabase.co \
+SUPABASE_ANON_KEY=tu_anon_key \
+VOLUNTEER_EMAIL=voluntario@ejemplo.org \
+VOLUNTEER_PASSWORD="clave-del-voluntario" \
+ADMIN_EMAIL=admin@ejemplo.org \
+ADMIN_PASSWORD="clave-del-administrador" \
+pnpm run test:rls
+```
+
+En PowerShell, define las mismas variables con `$env:NOMBRE="valor"` antes de ejecutar `pnpm run test:rls`. La prueba valida inserción anónima, escalamiento de rol, aprobación de donaciones por Voluntario y lectura administrativa.
