@@ -1,17 +1,35 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "../../../config/supabase";
 import { useAuth } from "../../auth/hooks/useAuth";
-import { type DonacionRecibida, type DonacionEntregada, type RecibidasFilters, type EntregadasFilters } from "../types";
+import { 
+  type DonacionRecibida, 
+  type DonacionEntregada, 
+  type DonacionPendiente,
+  type RecibidasFilters, 
+  type EntregadasFilters,
+  type PendientesFilters 
+} from "../types";
 
 interface UseDonationsParams {
   pageRecibidas: number;
   pageEntregadas: number;
+  pagePendientes?: number;
   pageSize: number;
   searchRecibidas: string;
   searchEntregadas: string;
+  searchPendientes?: string;
   filtersRecibidas?: RecibidasFilters;
   filtersEntregadas?: EntregadasFilters;
+  filtersPendientes?: PendientesFilters;
 }
+
+const DONACIONES_PENDIENTES_SELECT_FIELDS = `
+  *,
+  catalogo_ayudas (
+    nombre_articulo,
+    categoria
+  )
+`;
 
 const DONACIONES_RECIBIDAS_SELECT_FIELDS = `
   *,
@@ -38,6 +56,59 @@ const formatLocalDate = (d: Date) => {
   const day = String(d.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
+
+async function fetchFilteredDonacionesPendientes({
+  searchPendientes,
+  filtersPendientes,
+  pagePendientes,
+  pageSize,
+  countExact = false,
+}: {
+  searchPendientes?: string;
+  filtersPendientes?: PendientesFilters;
+  pagePendientes?: number;
+  pageSize?: number;
+  countExact?: boolean;
+}) {
+  let query = supabase
+    .from("donaciones_pendientes")
+    .select(DONACIONES_PENDIENTES_SELECT_FIELDS, countExact ? { count: "exact" } : undefined);
+
+  if (searchPendientes?.trim()) {
+    const search = searchPendientes.trim();
+    query = query.or(`entidad_donante.ilike.%${search}%,observaciones.ilike.%${search}%,referencia.ilike.%${search}%`);
+  }
+
+  if (filtersPendientes) {
+    if (filtersPendientes.estado && filtersPendientes.estado !== "Todos") {
+      query = query.eq("estado", filtersPendientes.estado);
+    } else if (!filtersPendientes.estado) {
+      query = query.eq("estado", "Pendiente");
+    }
+
+    if (
+      filtersPendientes.fechaRango &&
+      filtersPendientes.fechaRango[0] &&
+      filtersPendientes.fechaRango[1]
+    ) {
+      const start = formatLocalDate(filtersPendientes.fechaRango[0]);
+      const end = formatLocalDate(filtersPendientes.fechaRango[1]);
+      query = query.gte("fecha", start).lte("fecha", end);
+    }
+  } else {
+    query = query.eq("estado", "Pendiente");
+  }
+
+  query = query.order("created_at", { ascending: false });
+
+  if (pagePendientes !== undefined && pageSize !== undefined) {
+    const from = (pagePendientes - 1) * pageSize;
+    const to = pagePendientes * pageSize - 1;
+    query = query.range(from, to);
+  }
+
+  return await query;
+}
 
 async function fetchFilteredDonacionesRecibidas({
   searchRecibidas,
@@ -173,11 +244,14 @@ async function fetchFilteredDonacionesEntregadas({
 export function useDonations({
   pageRecibidas,
   pageEntregadas,
+  pagePendientes = 1,
   pageSize,
   searchRecibidas,
   searchEntregadas,
+  searchPendientes = "",
   filtersRecibidas,
   filtersEntregadas,
+  filtersPendientes,
 }: UseDonationsParams) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -277,6 +351,77 @@ export function useDonations({
       };
     },
     placeholderData: (previousData) => previousData,
+  });
+
+  // 5. Query para Donaciones Pendientes (Paginadas y Filtradas)
+  const { data: pendientesData, isLoading: loadingPendientes } = useQuery({
+    queryKey: ["donaciones_pendientes", { pagePendientes, pageSize, searchPendientes, filtersPendientes }],
+    queryFn: async () => {
+      const { data, count, error } = await fetchFilteredDonacionesPendientes({
+        searchPendientes,
+        filtersPendientes,
+        pagePendientes,
+        pageSize,
+        countExact: true,
+      });
+
+      if (error) throw error;
+
+      return {
+        pendientes: (data || []) as unknown as DonacionPendiente[],
+        count: count || 0,
+      };
+    },
+    placeholderData: (previousData) => previousData,
+  });
+
+  // Query para obtener el badge count de donaciones pendientes sin revisar ('Pendiente')
+  const { data: pendingBadgeCount = 0 } = useQuery({
+    queryKey: ["donaciones_pendientes_badge_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("donaciones_pendientes")
+        .select("id", { count: "exact", head: true })
+        .eq("estado", "Pendiente");
+
+      if (error) throw error;
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
+
+  // Mutación para aprobar una donación pendiente
+  const aprobarPendienteMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { error } = await supabase.rpc("aprobar_donacion_pendiente", {
+        p_id_pendiente: id,
+        p_registrado_por: user?.id || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["donaciones_pendientes"] });
+      void queryClient.invalidateQueries({ queryKey: ["donaciones_pendientes_badge_count"] });
+      void queryClient.invalidateQueries({ queryKey: ["donaciones_recibidas"] });
+      void queryClient.invalidateQueries({ queryKey: ["donations_stats"] });
+    },
+  });
+
+  // Mutación para rechazar una donación pendiente
+  const rechazarPendienteMutation = useMutation({
+    mutationFn: async ({ id, motivo }: { id: string; motivo?: string }) => {
+      const { error } = await supabase.rpc("rechazar_donacion_pendiente", {
+        p_id_pendiente: id,
+        p_registrado_por: user?.id || null,
+        p_motivo: motivo || null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["donaciones_pendientes"] });
+      void queryClient.invalidateQueries({ queryKey: ["donaciones_pendientes_badge_count"] });
+      void queryClient.invalidateQueries({ queryKey: ["donations_stats"] });
+    },
   });
 
   // 4. Mutación para guardar donación recibida
@@ -407,6 +552,14 @@ export function useDonations({
     });
   };
 
+  const handleAprobarPendiente = async (id: string) => {
+    await aprobarPendienteMutation.mutateAsync({ id });
+  };
+
+  const handleRechazarPendiente = async (id: string, motivo?: string) => {
+    await rechazarPendienteMutation.mutateAsync({ id, motivo });
+  };
+
   // Obtener donaciones recibidas filtradas sin paginación
   const fetchExportRecibidas = async (): Promise<DonacionRecibida[]> => {
     const { data, error } = await fetchFilteredDonacionesRecibidas({
@@ -437,16 +590,27 @@ export function useDonations({
   const totalCountEntregadas = entregadasData?.count || 0;
   const totalPagesEntregadas = Math.ceil(totalCountEntregadas / pageSize);
 
+  const pendientes = pendientesData?.pendientes || [];
+  const totalCountPendientes = pendientesData?.count || 0;
+  const totalPagesPendientes = Math.ceil(totalCountPendientes / pageSize);
+
   const loading =
     loadingStats ||
     loadingRecibidas ||
     loadingEntregadas ||
+    loadingPendientes ||
     saveRecibidaMutation.isPending ||
-    saveEntregadaMutation.isPending;
+    saveEntregadaMutation.isPending ||
+    aprobarPendienteMutation.isPending ||
+    rechazarPendienteMutation.isPending;
 
   return {
     recibidas,
     entregadas,
+    pendientes,
+    pendingBadgeCount,
+    totalCountPendientes,
+    totalPagesPendientes,
     ayudas,
     loading,
     totalCountRecibidas,
@@ -456,6 +620,8 @@ export function useDonations({
     stats,
     handleSaveRecibida,
     handleSaveEntregada,
+    handleAprobarPendiente,
+    handleRechazarPendiente,
     fetchExportRecibidas,
     fetchExportEntregadas,
   };

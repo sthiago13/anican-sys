@@ -26,6 +26,8 @@ import {
   IconUserCheck,
   IconCirclePlus,
   IconGift,
+  IconBuildingBank,
+  IconEye,
 } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { ExportButton } from "../../../components/UI/ExportButton";
@@ -34,14 +36,17 @@ import { SearchInput } from "../../../components/UI/SearchInput";
 import { useDonations } from "../hooks/useDonations";
 import { RecibidaModal } from "./RecibidaModal";
 import { EntregadaModal } from "./EntregadaModal";
+import { VerificarPendienteModal } from "./VerificarPendienteModal";
 import { formatDate } from "../../../utils/date";
 import { FilterBar } from "../../../components/UI/FilterSystem/FilterBar";
 import { type FilterConfig } from "../../../components/UI/FilterSystem/types";
 import {
   type RecibidasFilters,
   type EntregadasFilters,
+  type PendientesFilters,
   type DonacionRecibida,
   type DonacionEntregada,
+  type DonacionPendiente,
 } from "../types";
 import {
   exportToExcel,
@@ -61,6 +66,30 @@ const initialFiltersEntregadas: EntregadasFilters = {
   ayuda: "Todos",
   conSoporte: "Todos",
 };
+
+const initialFiltersPendientes: PendientesFilters = {
+  estado: "Pendiente",
+  fechaRango: [null, null],
+};
+
+const filterConfigsPendientes: FilterConfig[] = [
+  {
+    key: "estado",
+    label: "Estado",
+    type: "select",
+    options: [
+      { label: "Todos los Estados", value: "Todos" },
+      { label: "Pendientes por Verificar", value: "Pendiente" },
+      { label: "Aprobadas", value: "Aprobado" },
+      { label: "Rechazadas", value: "Rechazado" },
+    ],
+  },
+  {
+    key: "fechaRango",
+    label: "Rango de Fecha",
+    type: "date-range",
+  },
+];
 
 const recibidasExportColumns: ColumnDefinition<DonacionRecibida>[] = [
   { header: "Donante / Benefactor", accessor: (r) => r.entidad_donante },
@@ -115,10 +144,12 @@ const entregadasExportColumns: ColumnDefinition<DonacionEntregada>[] = [
 export function DonationsView() {
   const [pageRecibidas, setPageRecibidas] = useState(1);
   const [pageEntregadas, setPageEntregadas] = useState(1);
+  const [pagePendientes, setPagePendientes] = useState(1);
   const pageSize = 10;
 
   const [searchRecibidas, setSearchRecibidas] = useState("");
   const [searchEntregadas, setSearchEntregadas] = useState("");
+  const [searchPendientes, setSearchPendientes] = useState("");
 
   const [filtersRecibidas, setFiltersRecibidas] = useState<RecibidasFilters>(
     initialFiltersRecibidas,
@@ -127,6 +158,13 @@ export function DonationsView() {
   const [filtersEntregadas, setFiltersEntregadas] = useState<EntregadasFilters>(
     initialFiltersEntregadas,
   );
+
+  const [filtersPendientes, setFiltersPendientes] = useState<PendientesFilters>(
+    initialFiltersPendientes,
+  );
+
+  const [selectedPendiente, setSelectedPendiente] = useState<DonacionPendiente | null>(null);
+  const [modalVerificarOpened, setModalVerificarOpened] = useState(false);
 
   const handleSearchRecibidas = (val: string) => {
     setSearchRecibidas(val);
@@ -138,9 +176,18 @@ export function DonationsView() {
     setPageEntregadas(1);
   };
 
+  const handleSearchPendientes = (val: string) => {
+    setSearchPendientes(val);
+    setPagePendientes(1);
+  };
+
   const {
     recibidas,
     entregadas,
+    pendientes,
+    pendingBadgeCount,
+    totalCountPendientes,
+    totalPagesPendientes,
     ayudas,
     loading,
     totalCountRecibidas,
@@ -150,16 +197,21 @@ export function DonationsView() {
     stats,
     handleSaveRecibida,
     handleSaveEntregada,
+    handleAprobarPendiente,
+    handleRechazarPendiente,
     fetchExportRecibidas,
     fetchExportEntregadas,
   } = useDonations({
     pageRecibidas,
     pageEntregadas,
+    pagePendientes,
     pageSize,
     searchRecibidas,
     searchEntregadas,
+    searchPendientes,
     filtersRecibidas,
     filtersEntregadas,
+    filtersPendientes,
   });
 
   const [exportingRecibidas, setExportingRecibidas] = useState(false);
@@ -497,6 +549,40 @@ export function DonationsView() {
         <Tabs value={activeTab} onChange={setActiveTab} color="orange">
           <Tabs.List mb="md" style={{ borderBottom: "2px solid var(--anican-border)", gap: "12px" }}>
             <Tabs.Tab
+              value="pendientes"
+              leftSection={<IconBuildingBank size={18} />}
+              rightSection={
+                pendingBadgeCount > 0 ? (
+                  <Badge color="red" size="xs" circle>
+                    {pendingBadgeCount}
+                  </Badge>
+                ) : null
+              }
+              style={{
+                fontWeight: activeTab === "pendientes" ? 700 : 500,
+                fontSize: "14px",
+                padding: "10px 20px",
+                backgroundColor:
+                  activeTab === "pendientes"
+                    ? "rgba(232, 115, 25, 0.08)"
+                    : "transparent",
+                color:
+                  activeTab === "pendientes"
+                    ? "#e87319"
+                    : "var(--anican-text-dimmed, #666666)",
+                borderBottom:
+                  activeTab === "pendientes"
+                    ? "3px solid #e87319"
+                    : "3px solid transparent",
+                borderRadius: "8px 8px 0 0",
+                transition: "none",
+                marginBottom: "-2px",
+              }}
+            >
+              Pendientes (Landing Web)
+            </Tabs.Tab>
+
+            <Tabs.Tab
               value="recibidas"
               leftSection={<IconHeartHandshake size={18} />}
               style={{
@@ -550,6 +636,139 @@ export function DonationsView() {
               Egresos (Ayudas Entregadas) ({totalEntregadasCount})
             </Tabs.Tab>
           </Tabs.List>
+
+          <Tabs.Panel value="pendientes">
+            <Group mb="md" justify="space-between" align="center">
+              <div style={{ flexGrow: 1, maxWidth: 350 }}>
+                <SearchInput
+                  placeholder="Buscar pendientes por donante o referencia..."
+                  onSearchChange={handleSearchPendientes}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <Group gap="sm">
+                <FilterBar
+                  configs={filterConfigsPendientes}
+                  values={filtersPendientes}
+                  initialValues={initialFiltersPendientes}
+                  onChange={(newFilters) => {
+                    setFiltersPendientes(newFilters as PendientesFilters);
+                    setPagePendientes(1);
+                  }}
+                />
+              </Group>
+            </Group>
+
+            {loading && pendientes.length === 0 ? (
+              <Center style={{ height: "30vh" }}>
+                <Loader color="orange" size="xl" type="bars" />
+              </Center>
+            ) : (
+              <>
+                <div className="anican-table-container">
+                  <Table striped highlightOnHover verticalSpacing="sm">
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th style={{ width: "22%" }}>Donante / Benefactor</Table.Th>
+                        <Table.Th style={{ width: "12%" }}>Fecha</Table.Th>
+                        <Table.Th style={{ width: "22%" }}>Monto / Descripción</Table.Th>
+                        <Table.Th style={{ width: "18%" }}>Método / Ref</Table.Th>
+                        <Table.Th style={{ width: "12%" }}>Estado</Table.Th>
+                        <Table.Th style={{ width: "14%" }} ta="center">Acción</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {pendientes.length === 0 ? (
+                        <Table.Tr>
+                          <Table.Td colSpan={6}>
+                            <Text ta="center" py="xl" c="dimmed">
+                              No hay donaciones pendientes registradas.
+                            </Text>
+                          </Table.Td>
+                        </Table.Tr>
+                      ) : (
+                        pendientes.map((p) => (
+                          <Table.Tr key={p.id}>
+                            <Table.Td>
+                              <Text size="sm" fw={600} c="var(--anican-azul-oscuro)">
+                                {p.entidad_donante}
+                              </Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm">{formatDate(p.fecha)}</Text>
+                            </Table.Td>
+                            <Table.Td>
+                              <Text size="sm" fw={600}>{p.monto_o_cantidad}</Text>
+                              {p.monto_equivalente_usd != null && (
+                                <Text size="xs" c="teal" fw={700}>
+                                  ${p.monto_equivalente_usd.toLocaleString("en-US", { minimumFractionDigits: 2 })} USD
+                                </Text>
+                              )}
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge variant="outline" color="blue" size="xs">
+                                {p.metodo_ingreso || "Web Landing"}
+                              </Badge>
+                              {p.referencia && (
+                                <Text size="xs" c="dimmed" mt={2}>
+                                  Ref: {p.referencia}
+                                </Text>
+                              )}
+                            </Table.Td>
+                            <Table.Td>
+                              <Badge
+                                color={
+                                  p.estado === "Aprobado"
+                                    ? "teal"
+                                    : p.estado === "Rechazado"
+                                    ? "red"
+                                    : "orange"
+                                }
+                                variant="light"
+                                size="sm"
+                              >
+                                {p.estado}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td ta="center">
+                              <Button
+                                size="xs"
+                                variant={p.estado === "Pendiente" ? "filled" : "outline"}
+                                color={p.estado === "Pendiente" ? "orange" : "gray"}
+                                leftSection={<IconEye size={14} />}
+                                onClick={() => {
+                                  setSelectedPendiente(p);
+                                  setModalVerificarOpened(true);
+                                }}
+                              >
+                                {p.estado === "Pendiente" ? "Verificar" : "Detalle"}
+                              </Button>
+                            </Table.Td>
+                          </Table.Tr>
+                        ))
+                      )}
+                    </Table.Tbody>
+                  </Table>
+                </div>
+
+                {totalPagesPendientes > 1 && (
+                  <Group justify="space-between" mt="md" align="center">
+                    <Text size="xs" c="dimmed">
+                      Mostrando {pendientes.length} de {totalCountPendientes} registros
+                    </Text>
+                    <Pagination
+                      total={totalPagesPendientes}
+                      value={pagePendientes}
+                      onChange={setPagePendientes}
+                      color="orange"
+                      size="sm"
+                      withEdges
+                    />
+                  </Group>
+                )}
+              </>
+            )}
+          </Tabs.Panel>
 
           <Tabs.Panel value="recibidas">
             <Group mb="md" justify="space-between" align="center">
@@ -929,6 +1148,17 @@ export function DonationsView() {
         opened={entregadaModalOpened}
         onClose={() => setEntregadaModalOpened(false)}
         onSave={handleSaveEntregada}
+      />
+
+      <VerificarPendienteModal
+        opened={modalVerificarOpened}
+        onClose={() => {
+          setModalVerificarOpened(false);
+          setSelectedPendiente(null);
+        }}
+        donacion={selectedPendiente}
+        onAprobar={handleAprobarPendiente}
+        onRechazar={handleRechazarPendiente}
       />
     </Stack>
   );
