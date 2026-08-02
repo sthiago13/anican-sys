@@ -1,15 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 // IMPORTANTE: Para crear usuarios y bypassear RLS se necesita el service_role key, NO el anon key.
-const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const email = process.env.VITE_ADMIN_EMAIL || process.env.ADMIN_EMAIL;
-const password = process.env.VITE_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD;
+const email = process.env.ADMIN_EMAIL;
+const password = process.env.ADMIN_PASSWORD;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error("❌ ERROR: Faltan variables de entorno.");
-  console.error("Asegúrate de definir 'VITE_SUPABASE_URL' y 'SUPABASE_SERVICE_ROLE_KEY' en tu archivo .env.local");
+  console.error("Asegúrate de definir 'SUPABASE_URL' y 'SUPABASE_SERVICE_ROLE_KEY' en tu archivo .env.local");
   console.error("Ejecuta el script de esta manera si usas Node 20+: node --env-file=.env.local scripts/seed-admin.js");
   process.exit(1);
 }

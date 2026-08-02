@@ -1,11 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseServiceKey = process.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseServiceKey) {
   console.error("❌ ERROR: Faltan variables de entorno.");
-  console.error("Asegúrate de definir 'VITE_SUPABASE_URL' y 'VITE_SUPABASE_SERVICE_ROLE_KEY' en tu archivo .env.local");
+  console.error("Asegúrate de definir 'SUPABASE_URL' y 'SUPABASE_SERVICE_ROLE_KEY' en tu archivo .env.local");
   console.error("Ejecuta el script con: node --env-file=.env.local scripts/seed-data.js");
   process.exit(1);
 }

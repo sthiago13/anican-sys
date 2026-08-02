@@ -23,7 +23,7 @@ Sistema de planificación de recursos y gestión administrativa interna para la 
 
    # Credenciales para el administrador por defecto
    ADMIN_EMAIL=admin@anican.org
-   ADMIN_PASSWORD=admin12345
+   ADMIN_PASSWORD=usa_una_clave_larga_y_unica
    ```
    > **Nota:** La llave `SUPABASE_SERVICE_ROLE_KEY` es estrictamente necesaria para el script de inicialización de usuarios. Nunca la expongas en el código frontend.
 
