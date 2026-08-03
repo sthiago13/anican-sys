@@ -77,16 +77,12 @@ El `SUPABASE_SERVICE_ROLE_KEY` es inyectado por Supabase en la Edge Function y n
 
 ## Pruebas RLS con JWT
 
-La prueba remota usa únicamente la clave `anon` y credenciales temporales de un Voluntario y un Administrador:
+La prueba remota usa únicamente la clave `anon` y credenciales temporales de un Voluntario y un Administrador. El script carga automáticamente `.env.local` y acepta `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` desde ese archivo.
 
 ```bash
-SUPABASE_URL=https://tu-proyecto.supabase.co \
-SUPABASE_ANON_KEY=tu_anon_key \
-VOLUNTEER_EMAIL=voluntario@ejemplo.org \
-VOLUNTEER_PASSWORD="clave-del-voluntario" \
-ADMIN_EMAIL=admin@ejemplo.org \
-ADMIN_PASSWORD="clave-del-administrador" \
+export VOLUNTEER_EMAIL="voluntario@ejemplo.org"
+export VOLUNTEER_PASSWORD="clave-del-voluntario"
 pnpm run test:rls
 ```
 
-En PowerShell, define las mismas variables con `$env:NOMBRE="valor"` antes de ejecutar `pnpm run test:rls`. La prueba valida inserción anónima, escalamiento de rol, aprobación de donaciones por Voluntario y lectura administrativa.
+Si no usas `.env.local`, define también `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `ADMIN_EMAIL` y `ADMIN_PASSWORD`. En PowerShell, usa `$env:NOMBRE="valor"` antes de ejecutar `pnpm run test:rls`. La prueba valida inserción anónima, escalamiento de rol, aprobación de donaciones por Voluntario y lectura administrativa.

@@ -1,21 +1,32 @@
+import { loadEnvFile } from "node:process";
 import { createClient } from "@supabase/supabase-js";
 
+try {
+  loadEnvFile(".env.local");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
+
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? process.env.VITE_SUPABASE_ANON_KEY;
+
 const required = [
-  "SUPABASE_URL",
-  "SUPABASE_ANON_KEY",
   "VOLUNTEER_EMAIL",
   "VOLUNTEER_PASSWORD",
   "ADMIN_EMAIL",
   "ADMIN_PASSWORD",
 ];
 
+if (!supabaseUrl) throw new Error("Falta SUPABASE_URL o VITE_SUPABASE_URL.");
+if (!supabaseAnonKey) throw new Error("Falta SUPABASE_ANON_KEY o VITE_SUPABASE_ANON_KEY.");
+
 for (const name of required) {
   if (!process.env[name]) throw new Error(`Falta la variable ${name}.`);
 }
 
 const createTestClient = () => createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY,
+  supabaseUrl,
+  supabaseAnonKey,
   { auth: { persistSession: false, autoRefreshToken: false } },
 );
 
