@@ -341,6 +341,24 @@ p {
    Estilos de Impresión (PDF / Físico)
    ============================================= */
 @media print {
+  /* Forzar esquema claro y limpio en impresión independientemente del modo de pantalla */
+  :root,
+  html,
+  [data-mantine-color-scheme="dark"],
+  [data-mantine-color-scheme="light"] {
+    --anican-bg: #ffffff !important;
+    --anican-bg-card: #ffffff !important;
+    --anican-border: #cbd5e1 !important;
+    --anican-text: #2d3748 !important;
+    --anican-text-heading: #1a365d !important;
+    --anican-text-muted: #64748b !important;
+    --anican-azul-oscuro: #1a365d !important;
+    --anican-azul-claro: #2b6cb0 !important;
+    --mantine-color-body: #ffffff !important;
+    --mantine-color-text: #1a365d !important;
+    color-scheme: light !important;
+  }
+
   /* Ocultar elementos administrativos, barra lateral y controles */
   .no-print,
   aside,
@@ -356,7 +374,7 @@ p {
   /* Ajustar el layout principal para ocupar 100% de la página */
   body, #root, main, .mantine-AppShell-main, .printable-report, aside + div {
     background: #ffffff !important;
-    color: #000000 !important;
+    color: #1a365d !important;
     width: 100% !important;
     max-width: 100% !important;
     margin: 0 !important;
@@ -369,6 +387,68 @@ p {
   .print-header {
     display: block !important;
     margin-bottom: 2rem !important;
+  }
+
+  /* Tarjetas, StatCards, papeles y contenedores en blanco puro con borde limpio */
+  .mantine-Paper-root,
+  .mantine-Card-root,
+  .anican-card-hover,
+  [data-mantine-color-scheme="dark"] .mantine-Paper-root,
+  [data-mantine-color-scheme="dark"] .mantine-Card-root,
+  [data-mantine-color-scheme="dark"] .anican-card-hover {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #1a365d !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+  }
+
+  /* Texto general dentro de tarjetas en impresión */
+  .mantine-Paper-root .mantine-Text-root,
+  .mantine-Card-root .mantine-Text-root,
+  [data-mantine-color-scheme="dark"] .mantine-Paper-root .mantine-Text-root,
+  [data-mantine-color-scheme="dark"] .mantine-Card-root .mantine-Text-root {
+    color: #1a365d !important;
+  }
+
+  /* Títulos de métricas en StatCard (ej: DONACIONES RECIBIDAS) */
+  .mantine-Paper-root .mantine-Text-root[data-size="xs"],
+  .mantine-Card-root .mantine-Text-root[data-size="xs"],
+  .mantine-Text-root[data-dimmed],
+  .mantine-Text-root[c="dimmed"],
+  [data-mantine-color-scheme="dark"] .mantine-Text-root[data-dimmed],
+  [data-mantine-color-scheme="dark"] .mantine-Text-root[c="dimmed"] {
+    color: #64748b !important;
+    font-weight: 700 !important;
+  }
+
+  /* Cifras y números destacados en StatCards (ej: $ 24.896,31) */
+  .mantine-Paper-root .mantine-Text-root[data-size="xl"],
+  .mantine-Card-root .mantine-Text-root[data-size="xl"],
+  [data-mantine-color-scheme="dark"] .mantine-Paper-root .mantine-Text-root[data-size="xl"] {
+    color: #1a365d !important;
+    font-weight: 800 !important;
+  }
+
+  /* Iconos de StatCard en impresión */
+  .mantine-ThemeIcon-root {
+    background-color: transparent !important;
+  }
+
+  /* Gráficos Recharts en impresión (ejes, etiquetas y cuadrículas claros y legibles) */
+  .recharts-cartesian-axis-tick-value,
+  .recharts-legend-item-text,
+  .recharts-text,
+  [data-mantine-color-scheme="dark"] .recharts-cartesian-axis-tick-value,
+  [data-mantine-color-scheme="dark"] .recharts-legend-item-text,
+  [data-mantine-color-scheme="dark"] .recharts-text {
+    fill: #2d3748 !important;
+    color: #2d3748 !important;
+  }
+
+  .recharts-cartesian-grid-horizontal line,
+  .recharts-cartesian-grid-vertical line {
+    stroke: #e2e8f0 !important;
   }
 
   /* Forzar impresión de colores de fondo en gráficos y tarjetas */
@@ -392,8 +472,11 @@ p {
     break-inside: avoid !important;
   }
 
-  /* Ajustar tamaños de tipografías para impresión */
-  h1, h2, h3 {
+  /* Ajustar tamaños y colores de títulos para impresión */
+  h1, h2, h3, h4, h5, h6,
+  .printable-report h1,
+  .printable-report h2,
+  .printable-report h3 {
     color: #1a365d !important;
   }
 }

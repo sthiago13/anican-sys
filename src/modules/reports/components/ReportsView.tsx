@@ -12,6 +12,7 @@ import {
   Box,
   Card,
   Tooltip,
+  useMantineColorScheme,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import {
@@ -43,6 +44,7 @@ import { type ReportFinancialPoint } from "../types";
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
   const { perfil } = useAuth();
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
   const esAdministrador = perfil?.rol === "Administrador";
   const {
     loading,
@@ -199,9 +201,22 @@ export const ReportsView: React.FC = () => {
     exportToCSV(financialsChartData, columns, `reporte_financiero_${dayjs().format("YYYY-MM-DD")}`);
   };
 
-  // Acción para imprimir el reporte en formato PDF
+  // Acción para imprimir el reporte en formato PDF (forzando paleta clara para el documento)
   const handlePrint = () => {
-    window.print();
+    const wasDark = colorScheme === "dark";
+    if (wasDark) {
+      setColorScheme("light");
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          window.print();
+          setTimeout(() => {
+            setColorScheme("dark");
+          }, 150);
+        }, 100);
+      });
+    } else {
+      window.print();
+    }
   };
 
   const getFormattedPeriod = () => {
