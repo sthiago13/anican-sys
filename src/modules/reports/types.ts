@@ -31,3 +31,23 @@ export interface ReportFilters {
   fechaInicio: Date | null;
   fechaFin: Date | null;
 }
+
+export type LandingReportTarget = "doc1" | "doc2";
+
+export interface LandingReportItem {
+  id: LandingReportTarget;
+  label: string;
+  defaultTitle: string;
+  defaultDesc: string;
+  title: string;
+  desc: string;
+  filename: string | null;
+  fileUrl: string | null;
+}
+
+export interface PublishReportParams {
+  docId: LandingReportTarget;
+  title: string;
+  desc: string;
+  file?: File | null;
+}

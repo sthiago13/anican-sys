@@ -11,6 +11,8 @@ import {
   Loader,
   Box,
   Card,
+  Tooltip,
+  useMantineColorScheme,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import {
@@ -24,6 +26,7 @@ import {
   IconCash,
   IconClipboardList,
   IconUsers,
+  IconWorldUpload,
 } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { StatCard } from "../../../components/UI/StatCard";
@@ -31,6 +34,8 @@ import { useReportsData } from "../hooks/useReportsData";
 import { FinancialsChart } from "./FinancialsChart";
 import { DistributionChart } from "./DistributionChart";
 import { DemographicsChart } from "./DemographicsChart";
+import { PublishReportModal } from "./PublishReportModal";
+import { useAuth } from "../../auth/hooks/useAuth";
 import { utils, writeFile } from "xlsx";
 import dayjs from "dayjs";
 import { exportToCSV, type ColumnDefinition } from "../../../utils/exportUtils";
@@ -38,6 +43,9 @@ import { type ReportFinancialPoint } from "../types";
 
 export const ReportsView: React.FC = () => {
   const navigate = useNavigate();
+  const { perfil } = useAuth();
+  const { colorScheme, setColorScheme } = useMantineColorScheme();
+  const esAdministrador = perfil?.rol === "Administrador";
   const {
     loading,
     fechaInicio,
@@ -60,6 +68,7 @@ export const ReportsView: React.FC = () => {
   const [tempFechaInicio, setTempFechaInicio] = React.useState<Date | null>(fechaInicio);
   const [tempFechaFin, setTempFechaFin] = React.useState<Date | null>(fechaFin);
   const [prevFechas, setPrevFechas] = React.useState({ inicio: fechaInicio, fin: fechaFin });
+  const [publishModalOpen, setPublishModalOpen] = React.useState(false);
 
   if (fechaInicio !== prevFechas.inicio || fechaFin !== prevFechas.fin) {
     setPrevFechas({ inicio: fechaInicio, fin: fechaFin });
@@ -73,7 +82,7 @@ export const ReportsView: React.FC = () => {
 
     const wb = utils.book_new();
 
-    const autoFitColumns = (aoa: any[][]) => {
+    const autoFitColumns = (aoa: unknown[][]) => {
       if (aoa.length === 0) return [];
       const colCount = Math.max(...aoa.map((row) => row.length));
       const widths: { wch: number }[] = [];
@@ -192,9 +201,22 @@ export const ReportsView: React.FC = () => {
     exportToCSV(financialsChartData, columns, `reporte_financiero_${dayjs().format("YYYY-MM-DD")}`);
   };
 
-  // Acción para imprimir el reporte en formato PDF
+  // Acción para imprimir el reporte en formato PDF (forzando paleta clara para el documento)
   const handlePrint = () => {
-    window.print();
+    const wasDark = colorScheme === "dark";
+    if (wasDark) {
+      setColorScheme("light");
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          window.print();
+          setTimeout(() => {
+            setColorScheme("dark");
+          }, 150);
+        }, 100);
+      });
+    } else {
+      window.print();
+    }
   };
 
   const getFormattedPeriod = () => {
@@ -304,6 +326,21 @@ export const ReportsView: React.FC = () => {
 
         {/* Acciones principales */}
         <Group gap="sm">
+          <Tooltip
+            label={!esAdministrador ? "Solo los administradores pueden publicar reportes en la landing" : undefined}
+            disabled={esAdministrador}
+          >
+            <Button
+              variant="filled"
+              color="orange"
+              leftSection={<IconWorldUpload size={18} />}
+              onClick={() => setPublishModalOpen(true)}
+              radius="md"
+            >
+              Publicar en la Web
+            </Button>
+          </Tooltip>
+
           <Button
             variant="outline"
             color="orange"
@@ -524,6 +561,13 @@ export const ReportsView: React.FC = () => {
           ageData={ageDemographics}
         />
       </Stack>
+
+      <PublishReportModal
+        opened={publishModalOpen}
+        onClose={() => setPublishModalOpen(false)}
+        defaultPeriodText={getFormattedPeriod()}
+        esAdministrador={esAdministrador}
+      />
     </Stack>
   );
 };
