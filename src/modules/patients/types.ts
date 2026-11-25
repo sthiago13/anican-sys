@@ -14,6 +14,7 @@ export interface Paciente {
   nombres: string;
   apellidos: string;
   fecha_nacimiento: string;
+  edad?: number | null;
   sexo?: string;
   estado: "Activo" | "Fallecido" | "Inactivo";
   created_at?: string;
@@ -38,6 +39,10 @@ export interface PatientFilters {
   estado: string;
   sexo: string;
   diagnostico: string;
+  edad?: {
+    min: number | null;
+    max: number | null;
+  };
   nacimiento: {
     year: string;
     month: string;

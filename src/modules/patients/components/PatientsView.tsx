@@ -28,6 +28,7 @@ import GenderIcon from "../../../components/UI/gendersIcon";
 import { ImportModal } from "./ImportModal";
 import { type PatientFilters } from "../types";
 import { exportToExcel, exportToCSV, type ColumnDefinition } from "../../../utils/exportUtils";
+import { calculateAge } from "../../../utils/date";
 import { type Paciente } from "../types";
 import dayjs from "dayjs";
 
@@ -35,6 +36,10 @@ const initialFilters: PatientFilters = {
   estado: "Todos",
   sexo: "Todos",
   diagnostico: "Todos",
+  edad: {
+    min: null,
+    max: null,
+  },
   nacimiento: {
     year: "Todos",
     month: "Todos",
@@ -47,6 +52,13 @@ const patientExportColumns: ColumnDefinition<Paciente>[] = [
   { header: "Apellidos", accessor: (p) => p.apellidos },
   { header: "Sexo", accessor: (p) => p.sexo || "—" },
   { header: "Fecha Nacimiento", accessor: (p) => p.fecha_nacimiento ? dayjs(p.fecha_nacimiento).format("DD/MM/YYYY") : "—" },
+  {
+    header: "Edad",
+    accessor: (p) => {
+      const edad = p.edad ?? calculateAge(p.fecha_nacimiento);
+      return edad !== null && edad !== undefined ? `${edad} ${edad === 1 ? "año" : "años"}` : "—";
+    },
+  },
   { header: "Diagnóstico", accessor: (p) => p.diagnostico_nombre || "—" },
   { header: "Representante Legal", accessor: (p) => p.representante_nombre || "—" },
   { header: "Cédula Representante", accessor: (p) => p.representante?.cedula || "—" },
@@ -145,6 +157,12 @@ export function PatientsView() {
         type: "select",
         icon: <IconStethoscope size={16} stroke={1.5} />,
         options: diagsOptions,
+      },
+      {
+        key: "edad",
+        label: "Edad",
+        type: "number-range",
+        defaultValue: { min: null, max: null },
       },
       {
         key: "nacimiento",

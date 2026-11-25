@@ -11,6 +11,7 @@ import { DiagnosticsView } from "../modules/diagnostics/components/DiagnosticsVi
 import { UsersView } from "../modules/users/components/UsersView";
 import { AyudasView } from "../modules/ayudas/components/AyudasView";
 import { RepresentativesView } from "../modules/representatives/components/RepresentativesView";
+import { CajaView } from "../modules/caja/components/CajaView";
 import { ProtectedRoute } from "./ProtectedRoute";
 
 export const router = createBrowserRouter([
@@ -45,6 +46,10 @@ export const router = createBrowserRouter([
       {
         path: "donaciones",
         element: <DonationsView />,
+      },
+      {
+        path: "caja",
+        element: <CajaView />,
       },
       {
         path: "reportes",
