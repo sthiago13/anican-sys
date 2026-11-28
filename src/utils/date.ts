@@ -67,3 +67,21 @@ export const normalizeDateInput = (date: Date | string | null): Date | null => {
   // de cualquier desfase de huso horario posterior al ser renderizado por el componente
   return new Date(year, month, day, 12, 0, 0, 0);
 };
+
+export const calculateAge = (fechaNacimiento?: string | null): number | null => {
+  if (!fechaNacimiento) return null;
+  const datePart = fechaNacimiento.split("T")[0];
+  const parts = datePart.split("-").map(Number);
+  if (parts.length !== 3 || parts.some(Number.isNaN)) return null;
+
+  const [birthYear, birthMonth, birthDay] = parts;
+  const today = new Date();
+  let age = today.getFullYear() - birthYear;
+  const monthDiff = today.getMonth() + 1 - birthMonth;
+
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDay)) {
+    age--;
+  }
+
+  return age >= 0 ? age : 0;
+};

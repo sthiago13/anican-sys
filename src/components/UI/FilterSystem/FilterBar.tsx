@@ -5,6 +5,7 @@ import { type FilterConfig } from "./types";
 import { FilterDropdown } from "../FilterDropdown";
 import { DatePickerParts, type DatePartsValue } from "./DatePickerParts";
 import { DatePickerRange } from "./DatePickerRange";
+import { NumberRangeFilter, type NumberRangeValue } from "./NumberRangeFilter";
 import { IconButton } from "../IconButton";
 
 export interface FilterBarProps {
@@ -139,6 +140,17 @@ export const FilterBar: React.FC<FilterBarProps> = ({
                   value={value as [Date | null, Date | null]}
                   onChange={(val) => handleFilterChange(config.key, val)}
                   placeholder={config.placeholder}
+                />
+              );
+
+            case "number-range":
+              return (
+                <NumberRangeFilter
+                  key={config.key}
+                  label={config.label}
+                  icon={config.icon}
+                  value={value as NumberRangeValue}
+                  onChange={(val) => handleFilterChange(config.key, val)}
                 />
               );
 

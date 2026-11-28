@@ -5,7 +5,7 @@ import { IconButton } from "../../../components/UI/IconButton";
 import { RepresentanteInfoModal } from "./RepresentanteInfoModal";
 import { EditPatientModal } from "./EditPatientModal";
 import { type Paciente, type Representante, type Diagnostico } from "../types";
-import { formatDate } from "../../../utils/date";
+import { formatDate, calculateAge } from "../../../utils/date";
 import { FilterDropdown } from "../../../components/UI/FilterDropdown";
 
 export interface PacienteTableProps {
@@ -71,6 +71,7 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
 
   const rows = pacientes.map((paciente) => {
     const rep = paciente.representante;
+    const edad = paciente.edad ?? calculateAge(paciente.fecha_nacimiento);
 
     return (
       <Table.Tr key={paciente.id}>
@@ -90,6 +91,11 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
         <Table.Td>
           <Text size="sm" c="dimmed">
             {formatDate(paciente.fecha_nacimiento)}
+          </Text>
+        </Table.Td>
+        <Table.Td>
+          <Text size="sm" c="dimmed">
+            {edad !== null && edad !== undefined ? `${edad} ${edad === 1 ? "año" : "años"}` : "—"}
           </Text>
         </Table.Td>
         <Table.Td>
@@ -167,13 +173,14 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
       <Table striped highlightOnHover verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
-            <Table.Th style={{ width: "20%" }}>Paciente</Table.Th>
+            <Table.Th style={{ width: "18%" }}>Paciente</Table.Th>
             <Table.Th style={{ width: "18%" }}>Diagnóstico</Table.Th>
             <Table.Th style={{ width: "8%" }}>Sexo</Table.Th>
-            <Table.Th style={{ width: "12%" }}>Fecha Nac.</Table.Th>
-            <Table.Th style={{ width: "12%" }}>Estado</Table.Th>
-            <Table.Th style={{ width: "18%" }}>Representante</Table.Th>
-            <Table.Th style={{ width: "12%", textAlign: "right" }}>Acciones</Table.Th>
+            <Table.Th style={{ width: "11%" }}>Fecha Nac.</Table.Th>
+            <Table.Th style={{ width: "8%" }}>Edad</Table.Th>
+            <Table.Th style={{ width: "10%" }}>Estado</Table.Th>
+            <Table.Th style={{ width: "16%" }}>Representante</Table.Th>
+            <Table.Th style={{ width: "11%", textAlign: "right" }}>Acciones</Table.Th>
           </Table.Tr>
         </Table.Thead>
         <Table.Tbody>
@@ -181,7 +188,7 @@ export const PacienteTable: React.FC<PacienteTableProps> = ({
             rows
           ) : (
             <Table.Tr>
-              <Table.Td colSpan={7}>
+              <Table.Td colSpan={8}>
                 <Text ta="center" py="xl" c="dimmed">
                   No se encontraron pacientes que coincidan con la búsqueda.
                 </Text>

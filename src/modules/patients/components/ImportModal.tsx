@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Modal,
   Button as MantineButton,
@@ -14,6 +14,7 @@ import {
   Divider,
   ScrollArea,
   Alert,
+  Select,
 } from "@mantine/core";
 import {
   IconUpload,
@@ -24,6 +25,7 @@ import {
   IconUsers,
   IconUserCheck,
   IconExclamationMark,
+  IconStethoscope,
 } from "@tabler/icons-react";
 import { Button } from "../../../components/UI/Button";
 import { supabase } from "../../../config/supabase";
@@ -97,17 +99,262 @@ interface PatientConflict {
   resolution: "SKIP" | "DUPLICATE";
 }
 
+interface DiagnosisConflict {
+  normalizedKey: string;
+  rawName: string;
+  count: number;
+  resolution: "MAP_EXISTING" | "CREATE_NEW";
+  selectedDiagId: string;
+}
+
+const normalizeTextKey = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[.,()]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const toTitleCase = (value: string): string =>
+  value
+    .trim()
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+
+interface DiagSelectOption {
+  value: string;
+  label: string;
+}
+
+interface DiagnosisConflictCardProps {
+  conflict: DiagnosisConflict;
+  diagOptions: DiagSelectOption[];
+  onResolutionChange: (
+    normalizedKey: string,
+    resolution: "MAP_EXISTING" | "CREATE_NEW",
+  ) => void;
+  onSelectChange: (normalizedKey: string, selectedDiagId: string) => void;
+}
+
+const DiagnosisConflictCard: React.FC<DiagnosisConflictCardProps> = React.memo(
+  ({ conflict, diagOptions, onResolutionChange, onSelectChange }) => (
+    <Card withBorder p="md" radius="md">
+      <Stack gap="sm">
+        <Group justify="space-between" align="center" wrap="wrap">
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <Text size="xs" c="dimmed">
+              En el Excel ({conflict.count}{" "}
+              {conflict.count === 1 ? "paciente" : "pacientes"}):
+            </Text>
+            <Text size="sm" fw={700} c="var(--anican-naranja)">
+              {conflict.rawName}
+            </Text>
+          </div>
+          <div style={{ width: 250 }}>
+            <Text size="xs" fw={600} mb={4}>
+              Acción a tomar:
+            </Text>
+            <SegmentedControl
+              color="orange"
+              size="xs"
+              fullWidth
+              data={[
+                {
+                  label: "Vincular Existente",
+                  value: "MAP_EXISTING",
+                  disabled: diagOptions.length === 0,
+                },
+                { label: "Crear Nuevo", value: "CREATE_NEW" },
+              ]}
+              value={conflict.resolution}
+              onChange={(val) =>
+                onResolutionChange(
+                  conflict.normalizedKey,
+                  val as "MAP_EXISTING" | "CREATE_NEW",
+                )
+              }
+            />
+          </div>
+        </Group>
+
+        {conflict.resolution === "MAP_EXISTING" && (
+          <Select
+            size="xs"
+            label="Seleccionar diagnóstico almacenado en el sistema"
+            placeholder="Busca o selecciona un diagnóstico..."
+            searchable
+            limit={50}
+            maxDropdownHeight={220}
+            comboboxProps={{ withinPortal: true, transitionProps: { duration: 0 } }}
+            nothingFoundMessage="No se encontraron diagnósticos"
+            data={diagOptions}
+            value={conflict.selectedDiagId || null}
+            onChange={(val) =>
+              onSelectChange(conflict.normalizedKey, val || "")
+            }
+            error={
+              !conflict.selectedDiagId
+                ? "Debes seleccionar un diagnóstico o cambiar a 'Crear Nuevo'"
+                : undefined
+            }
+          />
+        )}
+      </Stack>
+    </Card>
+  ),
+);
+
+const DIAGNOSIS_ALIASES: Record<string, string> = {
+  lla: "leucemia linfoblastica aguda lla",
+  "l l a": "leucemia linfoblastica aguda lla",
+  leucemia: "leucemia linfoblastica aguda lla",
+  "leucemia linfoblastica aguda": "leucemia linfoblastica aguda lla",
+  lma: "leucemia mieloide aguda lma",
+  mieloide: "leucemia mieloide aguda lma",
+  "leucemia mieloide": "leucemia mieloide aguda lma",
+  "leucemia mieloide aguda": "leucemia mieloide aguda lma",
+  hodking: "linfoma de hodgkin",
+  hodgkin: "linfoma de hodgkin",
+  "linfoma hodgkin": "linfoma de hodgkin",
+  "linfoma no hodking": "linfoma no hodgkin",
+  retino: "retinoblastoma",
+  ret: "retinoblastoma",
+  "tumor de willms": "tumor de wilms nefroblastoma",
+  "tumor de wilms": "tumor de wilms nefroblastoma",
+  wilms: "tumor de wilms nefroblastoma",
+  nefroblastoma: "tumor de wilms nefroblastoma",
+};
+
+const HEADER_TO_FIELD: Record<string, keyof ExcelRow> = {
+  "apellidos paciente": "apellidos_paciente",
+  apellidos_paciente: "apellidos_paciente",
+  apellidos: "apellidos_paciente",
+  "nombres paciente": "nombres_paciente",
+  nombres_paciente: "nombres_paciente",
+  nombres: "nombres_paciente",
+  diagnostico: "diagnostico_paciente",
+  "diagnostico paciente": "diagnostico_paciente",
+  diagnostico_paciente: "diagnostico_paciente",
+  "fecha nacimiento": "fecha_nacimiento_paciente",
+  fecha_nacimiento_paciente: "fecha_nacimiento_paciente",
+  "fecha nac": "fecha_nacimiento_paciente",
+  sexo: "sexo_paciente",
+  sexo_paciente: "sexo_paciente",
+  "sexo paciente": "sexo_paciente",
+  estado: "estado_paciente",
+  estado_paciente: "estado_paciente",
+  "estado paciente": "estado_paciente",
+  "telefono 1": "telefono_1_representante",
+  telefono_1_representante: "telefono_1_representante",
+  "telefono 1 representante": "telefono_1_representante",
+  telefono: "telefono_1_representante",
+  "telefono 2": "telefono_2_representante",
+  telefono_2_representante: "telefono_2_representante",
+  "telefono 2 representante": "telefono_2_representante",
+  telefono_1: "telefono_2_representante",
+  "nombre representante": "nombres_representante",
+  "nombres representante": "nombres_representante",
+  nombres_representante: "nombres_representante",
+  representante: "nombres_representante",
+  "cedula representante": "cedula_representante",
+  cedula_representante: "cedula_representante",
+  cedula: "cedula_representante",
+  residencia: "residencia_representante",
+  residencia_representante: "residencia_representante",
+  "residencia representante": "residencia_representante",
+};
+
+const resolveHeaderField = (rawHeader: unknown): keyof ExcelRow | undefined => {
+  const headerStr = String(rawHeader ?? "").trim();
+  if (!headerStr) return undefined;
+  const normalizedKey = normalizeTextKey(headerStr).replace(/_/g, " ");
+  return HEADER_TO_FIELD[normalizedKey] ?? HEADER_TO_FIELD[headerStr.toLowerCase()];
+};
+
+const parseWorksheetRows = (worksheet: XLSX.WorkSheet): ExcelRow[] | null => {
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+    header: 1,
+    defval: "",
+  });
+
+  if (matrix.length === 0) {
+    return [];
+  }
+
+  const headerRow = matrix[0] || [];
+  const colFieldMap = new Map<number, keyof ExcelRow>();
+  const usedFields = new Set<keyof ExcelRow>();
+
+  headerRow.forEach((cell, colIdx) => {
+    let field = resolveHeaderField(cell);
+    if (!field) return;
+
+    // Si hay dos columnas llamadas "Teléfono", asignar la segunda a telefono_2
+    if (field === "telefono_1_representante" && usedFields.has(field)) {
+      field = "telefono_2_representante";
+    }
+
+    if (!usedFields.has(field)) {
+      colFieldMap.set(colIdx, field);
+      usedFields.add(field);
+    }
+  });
+
+  if (colFieldMap.size < 3) {
+    return null;
+  }
+
+  const rows: ExcelRow[] = [];
+  for (let i = 1; i < matrix.length; i++) {
+    const row = matrix[i] || [];
+    const isEmptyRow = row.every((cell) => String(cell ?? "").trim() === "");
+    if (isEmptyRow) {
+      break;
+    }
+
+    const mapped: ExcelRow = {};
+    colFieldMap.forEach((field, colIdx) => {
+      const val = row[colIdx];
+      if (val !== undefined && val !== "") {
+        if (
+          field === "fecha_nacimiento_paciente" ||
+          field === "cedula_representante" ||
+          field === "telefono_1_representante" ||
+          field === "telefono_2_representante"
+        ) {
+          mapped[field] = typeof val === "number" ? val : String(val);
+        } else {
+          mapped[field] = String(val);
+        }
+      }
+    });
+    rows.push(mapped);
+  }
+
+  return rows;
+};
+
 export const ImportModal: React.FC<ImportModalProps> = ({
   opened,
   onClose,
   onImportSuccess,
 }) => {
-  const [step, setStep] = useState<"upload" | "preview" | "conflicts" | "loading" | "result">(
-    "upload"
-  );
+  const [step, setStep] = useState<
+    "upload" | "preview" | "conflicts" | "loading" | "result"
+  >("upload");
   const [records, setRecords] = useState<ParsedRecord[]>([]);
-  const [repConflicts, setRepConflicts] = useState<RepresentativeConflict[]>([]);
+  const [repConflicts, setRepConflicts] = useState<RepresentativeConflict[]>(
+    [],
+  );
   const [pacConflicts, setPacConflicts] = useState<PatientConflict[]>([]);
+  const [diagConflicts, setDiagConflicts] = useState<DiagnosisConflict[]>([]);
+  const [dbDiagnosticos, setDbDiagnosticos] = useState<
+    { id: string; nombre: string }[]
+  >([]);
   const [importSummary, setImportSummary] = useState({
     repsCreados: 0,
     repsActualizados: 0,
@@ -123,6 +370,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     setRecords([]);
     setRepConflicts([]);
     setPacConflicts([]);
+    setDiagConflicts([]);
+    setDbDiagnosticos([]);
     setImportSummary({
       repsCreados: 0,
       repsActualizados: 0,
@@ -139,45 +388,42 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   // 1. Descargar Plantilla de Excel
   const handleDownloadTemplate = () => {
     const headers = [
-      "cedula_representante",
-      "nombres_representante",
-      "telefono_1_representante",
-      "telefono_2_representante",
-      "residencia_representante",
-      "nombres_paciente",
-      "apellidos_paciente",
-      "fecha_nacimiento_paciente",
-      "sexo_paciente",
-      "estado_paciente",
-      "diagnostico_paciente",
+      "Apellidos Paciente",
+      "Nombres Paciente",
+      "Diagnóstico",
+      "Fecha Nacimiento",
+      "Sexo",
+      "Teléfono 1",
+      "Teléfono 2",
+      "Nombre Representante",
+      "Cédula Representante",
+      "Residencia",
     ];
 
     const sampleData = [
       {
-        cedula_representante: "V-12345678",
-        nombres_representante: "Pedro Pérez",
-        telefono_1_representante: "04121234567",
-        telefono_2_representante: "02517654321",
-        residencia_representante: "Cabudare, Edo. Lara",
-        nombres_paciente: "Juan José",
-        apellidos_paciente: "Pérez Gómez",
-        fecha_nacimiento_paciente: "2018-05-20",
-        sexo_paciente: "Masculino",
-        estado_paciente: "Activo",
-        diagnostico_paciente: "Leucemia Linfoblástica Aguda (LLA)",
+        "Apellidos Paciente": "Pérez Gómez",
+        "Nombres Paciente": "Juan José",
+        Diagnóstico: "Leucemia Linfoblástica Aguda (LLA)",
+        "Fecha Nacimiento": "2018-05-20",
+        Sexo: "Masculino",
+        "Teléfono 1": "04121234567",
+        "Teléfono 2": "02517654321",
+        "Nombre Representante": "Pedro Pérez",
+        "Cédula Representante": "V-12345678",
+        Residencia: "Cabudare, Edo. Lara",
       },
       {
-        cedula_representante: "V-87654321",
-        nombres_representante: "María Rodríguez",
-        telefono_1_representante: "04149876543",
-        telefono_2_representante: "",
-        residencia_representante: "San Cristóbal, Edo. Táchira",
-        nombres_paciente: "Sofía Victoria",
-        apellidos_paciente: "Rodríguez",
-        fecha_nacimiento_paciente: "2016-11-02",
-        sexo_paciente: "Femenino",
-        estado_paciente: "Activo",
-        diagnostico_paciente: "Retinoblastoma",
+        "Apellidos Paciente": "Rodríguez",
+        "Nombres Paciente": "Sofía Victoria",
+        Diagnóstico: "Retinoblastoma",
+        "Fecha Nacimiento": "2016-11-02",
+        Sexo: "",
+        "Teléfono 1": "04149876543",
+        "Teléfono 2": "",
+        "Nombre Representante": "María Rodríguez",
+        "Cédula Representante": "V-87654321",
+        Residencia: "San Cristóbal, Edo. Táchira",
       },
     ];
 
@@ -190,7 +436,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   // Parsear Fecha de Excel o String
   const parseExcelDate = (val: string | number | undefined): string => {
     if (!val) return "";
-    
+
     // Si viene como número de serie de Excel
     if (typeof val === "number") {
       const date = XLSX.SSF.parse_date_code(val);
@@ -205,7 +451,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     if (/^\d{4}-\d{2}-\d{2}$/.test(strVal)) {
       return strVal;
     }
-    
+
     // Validar formato DD/MM/YYYY y convertir
     const slashParts = strVal.split("/");
     if (slashParts.length === 3) {
@@ -222,6 +468,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
       }
     }
+    const spaceDateMatch = strVal.match(/^(\d{1,2})[/-](\d{1,2})\s+(\d{4})$/);
+    if (spaceDateMatch) {
+      const [, d, m, y] = spaceDateMatch;
+      return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    }
 
     return strVal;
   };
@@ -235,30 +486,42 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         const workbook = XLSX.read(data, { type: "array" });
         const firstSheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[firstSheetName];
-        const rawJson = XLSX.utils.sheet_to_json<ExcelRow>(worksheet);
+        const rows = parseWorksheetRows(worksheet);
 
-        if (rawJson.length === 0) {
-          alert("El archivo Excel está vacío.");
+        if (rows === null) {
+          alert("No se encontraron encabezados válidos en la hoja de Excel.");
           return;
         }
 
-        const parsed: ParsedRecord[] = rawJson.map((row, idx) => {
+        if (rows.length === 0) {
+          alert("No se encontraron registros debajo de los encabezados.");
+          return;
+        }
+
+        const parsed: ParsedRecord[] = rows.map((row, idx) => {
           const errors: string[] = [];
           const cedula = String(row.cedula_representante || "").trim();
           const nombresRep = String(row.nombres_representante || "").trim();
+          const telefono1 = String(row.telefono_1_representante || "").trim();
           const nombresPac = String(row.nombres_paciente || "").trim();
           const apellidosPac = String(row.apellidos_paciente || "").trim();
+          const diagnosticoPac = String(row.diagnostico_paciente || "").trim();
           const rawFechaNac = row.fecha_nacimiento_paciente;
           const fechaNac = parseExcelDate(rawFechaNac);
 
           if (!cedula) errors.push("Cédula de representante requerida.");
           if (!nombresRep) errors.push("Nombre de representante requerido.");
-          if (!nombresPac) errors.push("Nombre del paciente requerido.");
+          if (!telefono1) errors.push("Teléfono 1 requerido.");
           if (!apellidosPac) errors.push("Apellido del paciente requerido.");
+          if (!nombresPac) errors.push("Nombre del paciente requerido.");
+          if (!diagnosticoPac)
+            errors.push("Diagnóstico del paciente requerido.");
           if (!fechaNac) {
             errors.push("Fecha de nacimiento del paciente requerida.");
           } else if (isNaN(Date.parse(fechaNac))) {
-            errors.push(`Fecha de nacimiento inválida: '${fechaNac}'. Use YYYY-MM-DD.`);
+            errors.push(
+              `Fecha de nacimiento inválida: '${fechaNac}'. Use YYYY-MM-DD.`,
+            );
           }
 
           let sexo = String(row.sexo_paciente || "").trim();
@@ -266,7 +529,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             const sexLower = sexo.toLowerCase();
             if (sexLower.startsWith("m")) sexo = "Masculino";
             else if (sexLower.startsWith("f")) sexo = "Femenino";
-            else errors.push(`Sexo inválido: '${sexo}'. Debe ser Masculino o Femenino.`);
+            else
+              errors.push(
+                `Sexo inválido: '${sexo}'. Debe ser Masculino o Femenino.`,
+              );
           } else {
             sexo = "";
           }
@@ -278,7 +544,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             else if (estLower.startsWith("inac")) estado = "Inactivo";
             else if (estLower.startsWith("fall")) estado = "Fallecido";
             else {
-              errors.push(`Estado inválido: '${estado}'. Debe ser Activo, Inactivo o Fallecido.`);
+              errors.push(
+                `Estado inválido: '${estado}'. Debe ser Activo, Inactivo o Fallecido.`,
+              );
               estado = "Activo";
             }
           } else {
@@ -291,18 +559,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             errors,
             rep: {
               cedula,
-              nombres: nombresRep,
-              telefono_1: row.telefono_1_representante ? String(row.telefono_1_representante).trim() : null,
-              telefono_2: row.telefono_2_representante ? String(row.telefono_2_representante).trim() : null,
-              residencia: row.residencia_representante ? String(row.residencia_representante).trim() : null,
+              nombres: toTitleCase(nombresRep),
+              telefono_1: telefono1 || null,
+              telefono_2: row.telefono_2_representante
+                ? String(row.telefono_2_representante).trim() || null
+                : null,
+              residencia: row.residencia_representante
+                ? toTitleCase(String(row.residencia_representante)) || null
+                : null,
             },
             pac: {
-              nombres: nombresPac,
-              apellidos: apellidosPac,
+              nombres: toTitleCase(nombresPac),
+              apellidos: toTitleCase(apellidosPac),
               fecha_nacimiento: fechaNac,
               sexo: sexo || null,
               estado: estado as ParsedRecord["pac"]["estado"],
-              diagnostico: row.diagnostico_paciente ? String(row.diagnostico_paciente).trim() : null,
+              diagnostico: diagnosticoPac || null,
             },
           };
         });
@@ -311,7 +583,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         setStep("preview");
       } catch (err) {
         console.error(err);
-        alert("Ocurrió un error leyendo el archivo Excel. Asegúrese de que sea un archivo válido.");
+        alert(
+          "Ocurrió un error leyendo el archivo Excel. Asegúrese de que sea un archivo válido.",
+        );
       }
     };
     reader.readAsArrayBuffer(file);
@@ -342,7 +616,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
       if (pacErr) throw pacErr;
 
-      const repsMap = new Map<string, typeof dbReps[0]>();
+      const { data: dbDiags, error: diagErr } = await supabase
+        .from("diagnosticos")
+        .select("id, nombre")
+        .order("nombre", { ascending: true });
+
+      if (diagErr) throw diagErr;
+
+      const diagList = dbDiags || [];
+      setDbDiagnosticos(diagList);
+
+      const diagsNormalizedMap = new Map<string, string>(); // normalizedKey -> id
+      diagList.forEach((d) =>
+        diagsNormalizedMap.set(normalizeTextKey(d.nombre), d.id),
+      );
+
+      const repsMap = new Map<string, (typeof dbReps)[0]>();
       dbReps?.forEach((r) => repsMap.set(r.cedula, r));
 
       // Mapear pacientes existentes por tutor + nombre + nacimiento
@@ -354,10 +643,35 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
       const foundRepConflicts: RepresentativeConflict[] = [];
       const foundPacConflicts: PatientConflict[] = [];
+      const diagConflictsMap = new Map<string, DiagnosisConflict>();
 
       const processedCedulas = new Set<string>();
 
       validRecords.forEach((record) => {
+        // Chequear coincidencia de diagnóstico (directa o por alias)
+        if (record.pac.diagnostico) {
+          const normKey = normalizeTextKey(record.pac.diagnostico);
+          const aliasTarget = DIAGNOSIS_ALIASES[normKey];
+          const matchedId =
+            diagsNormalizedMap.get(normKey) ??
+            (aliasTarget ? diagsNormalizedMap.get(aliasTarget) : undefined);
+
+          if (!matchedId) {
+            const existing = diagConflictsMap.get(normKey);
+            if (existing) {
+              existing.count += 1;
+            } else {
+              diagConflictsMap.set(normKey, {
+                normalizedKey: normKey,
+                rawName: toTitleCase(record.pac.diagnostico),
+                count: 1,
+                resolution: diagList.length > 0 ? "MAP_EXISTING" : "CREATE_NEW",
+                selectedDiagId: "",
+              });
+            }
+          }
+        }
+
         // Chequear colisión de representante
         const repCedula = record.rep.cedula;
         const existingRep = repsMap.get(repCedula);
@@ -394,9 +708,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
             const pacDbMatch = dbPacs?.find(
               (p) =>
                 p.id_representante === existingRep.id &&
-                p.nombres.toLowerCase().trim() === record.pac.nombres.toLowerCase().trim() &&
-                p.apellidos.toLowerCase().trim() === record.pac.apellidos.toLowerCase().trim() &&
-                p.fecha_nacimiento === record.pac.fecha_nacimiento
+                p.nombres.toLowerCase().trim() ===
+                  record.pac.nombres.toLowerCase().trim() &&
+                p.apellidos.toLowerCase().trim() ===
+                  record.pac.apellidos.toLowerCase().trim() &&
+                p.fecha_nacimiento === record.pac.fecha_nacimiento,
             );
 
             foundPacConflicts.push({
@@ -408,7 +724,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                 id: pacDbMatch?.id || "",
                 nombres: pacDbMatch?.nombres || record.pac.nombres,
                 apellidos: pacDbMatch?.apellidos || record.pac.apellidos,
-                fecha_nacimiento: pacDbMatch?.fecha_nacimiento || record.pac.fecha_nacimiento,
+                fecha_nacimiento:
+                  pacDbMatch?.fecha_nacimiento || record.pac.fecha_nacimiento,
               },
               resolution: "SKIP",
             });
@@ -416,14 +733,25 @@ export const ImportModal: React.FC<ImportModalProps> = ({
         }
       });
 
+      const foundDiagConflicts = Array.from(diagConflictsMap.values());
+
       setRepConflicts(foundRepConflicts);
       setPacConflicts(foundPacConflicts);
+      setDiagConflicts(foundDiagConflicts);
 
-      if (foundRepConflicts.length > 0 || foundPacConflicts.length > 0) {
+      if (
+        foundRepConflicts.length > 0 ||
+        foundPacConflicts.length > 0 ||
+        foundDiagConflicts.length > 0
+      ) {
         setStep("conflicts");
       } else {
         // Si no hay conflictos, proceder directamente al guardado
-        await executeImport(foundRepConflicts, foundPacConflicts);
+        await executeImport(
+          foundRepConflicts,
+          foundPacConflicts,
+          foundDiagConflicts,
+        );
       }
     } catch (err) {
       console.error(err);
@@ -435,10 +763,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
   // 4. Ejecutar la importación aplicando decisiones de resolución de conflictos
   const executeImport = async (
     activeRepConflicts: RepresentativeConflict[],
-    activePacConflicts: PatientConflict[]
+    activePacConflicts: PatientConflict[],
+    activeDiagConflicts: DiagnosisConflict[],
   ) => {
     setStep("loading");
-    setLoadingText("Guardando diagnósticos nuevos...");
+    setLoadingText("Resolviendo diagnósticos...");
 
     const validRecords = records.filter((r) => r.isValid);
 
@@ -450,27 +779,33 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
       if (diagErr) throw diagErr;
 
-      const diagsMap = new Map<string, string>(); // nombre -> id
-      dbDiags?.forEach((d) => diagsMap.set(d.nombre.toLowerCase().trim(), d.id));
+      const diagsNormalizedMap = new Map<string, string>(); // normalizedKey -> id
+      dbDiags?.forEach((d) =>
+        diagsNormalizedMap.set(normalizeTextKey(d.nombre), d.id),
+      );
 
-      // Identificar diagnósticos únicos requeridos
-      const uniqueExcelDiags = new Set<string>();
-      validRecords.forEach((r) => {
-        if (r.pac.diagnostico) uniqueExcelDiags.add(r.pac.diagnostico.trim());
-      });
-
-      // Crear diagnósticos que no existen
-      for (const diagName of uniqueExcelDiags) {
-        const normalized = diagName.toLowerCase().trim();
-        if (!diagsMap.has(normalized)) {
+      // Aplicar decisiones de conflictos de diagnóstico
+      for (const diagConflict of activeDiagConflicts) {
+        if (
+          diagConflict.resolution === "MAP_EXISTING" &&
+          diagConflict.selectedDiagId
+        ) {
+          diagsNormalizedMap.set(
+            diagConflict.normalizedKey,
+            diagConflict.selectedDiagId,
+          );
+        } else if (!diagsNormalizedMap.has(diagConflict.normalizedKey)) {
           const { data: newDiag, error: insDiagErr } = await supabase
             .from("diagnosticos")
-            .insert({ nombre: diagName, descripcion: "Creado automáticamente vía Importador" })
+            .insert({
+              nombre: toTitleCase(diagConflict.rawName),
+              descripcion: "Creado automáticamente vía Importador",
+            })
             .select()
             .single();
 
           if (insDiagErr) throw insDiagErr;
-          diagsMap.set(normalized, newDiag.id);
+          diagsNormalizedMap.set(diagConflict.normalizedKey, newDiag.id);
         }
       }
 
@@ -485,8 +820,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       const repsIdMap = new Map<string, string>(); // cedula -> id
       freshReps?.forEach((r) => repsIdMap.set(r.cedula, r.id));
 
-      const repsConflictMap = new Map<string, RepresentativeConflict["resolution"]>();
-      activeRepConflicts.forEach((c) => repsConflictMap.set(c.cedula, c.resolution));
+      const repsConflictMap = new Map<
+        string,
+        RepresentativeConflict["resolution"]
+      >();
+      activeRepConflicts.forEach((c) =>
+        repsConflictMap.set(c.cedula, c.resolution),
+      );
 
       let repsCreados = 0;
       let repsActualizados = 0;
@@ -540,9 +880,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
       // 3. Procesar Pacientes
       setLoadingText("Importando pacientes...");
-      
+
       const pacsConflictMap = new Map<number, PatientConflict["resolution"]>();
-      activePacConflicts.forEach((c) => pacsConflictMap.set(c.excelIndex, c.resolution));
+      activePacConflicts.forEach((c) =>
+        pacsConflictMap.set(c.excelIndex, c.resolution),
+      );
 
       let pacsCreados = 0;
       let pacsOmitidos = 0;
@@ -559,12 +901,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
 
         const repId = repsIdMap.get(r.rep.cedula);
         if (!repId) {
-          console.warn(`No se encontró ID del representante para cédula ${r.rep.cedula}`);
+          console.warn(
+            `No se encontró ID del representante para cédula ${r.rep.cedula}`,
+          );
           continue;
         }
 
-        const diagId = r.pac.diagnostico
-          ? diagsMap.get(r.pac.diagnostico.toLowerCase().trim())
+        const diagNormKey = r.pac.diagnostico
+          ? normalizeTextKey(r.pac.diagnostico)
+          : "";
+        const diagAlias = diagNormKey
+          ? DIAGNOSIS_ALIASES[diagNormKey]
+          : undefined;
+        const diagId = diagNormKey
+          ? (diagsNormalizedMap.get(diagNormKey) ??
+            (diagAlias ? diagsNormalizedMap.get(diagAlias) : undefined) ??
+            null)
           : null;
 
         patientsToInsert.push({
@@ -595,7 +947,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       });
 
       setStep("result");
-      
+
       // Llamar al callback de refresco
       if (onImportSuccess) {
         await onImportSuccess();
@@ -624,8 +976,44 @@ export const ImportModal: React.FC<ImportModalProps> = ({
     }
   };
 
+  const diagSelectOptions = useMemo<DiagSelectOption[]>(
+    () =>
+      dbDiagnosticos.map((item) => ({
+        value: item.id,
+        label: item.nombre,
+      })),
+    [dbDiagnosticos],
+  );
+
+  const handleDiagResolutionChange = useCallback(
+    (normalizedKey: string, resolution: "MAP_EXISTING" | "CREATE_NEW") => {
+      setDiagConflicts((prev) =>
+        prev.map((item) =>
+          item.normalizedKey === normalizedKey ? { ...item, resolution } : item,
+        ),
+      );
+    },
+    [],
+  );
+
+  const handleDiagSelectChange = useCallback(
+    (normalizedKey: string, selectedDiagId: string) => {
+      setDiagConflicts((prev) =>
+        prev.map((item) =>
+          item.normalizedKey === normalizedKey
+            ? { ...item, selectedDiagId }
+            : item,
+        ),
+      );
+    },
+    [],
+  );
+
   const totalValid = records.filter((r) => r.isValid).length;
   const totalInvalid = records.filter((r) => !r.isValid).length;
+  const hasUnresolvedDiags = diagConflicts.some(
+    (d) => d.resolution === "MAP_EXISTING" && !d.selectedDiagId,
+  );
 
   return (
     <Modal
@@ -643,7 +1031,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       }
       centered
       radius="md"
-      size={step === "upload" || step === "loading" || step === "result" ? "md" : "xl"}
+      size={
+        step === "upload" || step === "loading" || step === "result"
+          ? "md"
+          : "xl"
+      }
       overlayProps={{
         backgroundOpacity: 0.55,
         blur: 3,
@@ -654,15 +1046,20 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       {step === "upload" && (
         <Stack gap="md" py="xs">
           <Text size="sm" c="dimmed">
-            Carga la data histórica de pacientes y sus tutores legales directamente desde una
-            hoja de cálculo de Excel.
+            Carga la data histórica de pacientes y sus tutores legales
+            directamente desde una hoja de cálculo de Excel.
           </Text>
 
-          <Alert color="orange" icon={<IconAlertCircle size={16} />} radius="md">
+          <Alert
+            color="orange"
+            icon={<IconAlertCircle size={16} />}
+            radius="md"
+          >
             <Text size="xs">
-              Para garantizar que los datos se importen de forma correcta, utiliza nuestra
-              plantilla oficial. El sistema asociará automáticamente a los pacientes con sus
-              representantes por medio de la cédula.
+              Para garantizar que los datos se importen de forma correcta,
+              utiliza nuestra plantilla oficial. El sistema asociará
+              automáticamente a los pacientes con sus representantes por medio
+              de la cédula.
             </Text>
           </Alert>
 
@@ -688,7 +1085,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               padding: "40px 20px",
               textAlign: "center",
               cursor: "pointer",
-              backgroundColor: dragOver ? "rgba(247, 103, 7, 0.05)" : "transparent",
+              backgroundColor: dragOver
+                ? "rgba(247, 103, 7, 0.05)"
+                : "transparent",
               transition: "all 0.2s ease",
             }}
             onClick={() => {
@@ -734,8 +1133,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           <Group justify="space-between">
             <div>
               <Text size="sm" c="dimmed">
-                Revisa los datos leídos de tu archivo Excel. Corrige los errores en el archivo y
-                vuelve a cargarlo si es necesario.
+                Revisa los datos leídos de tu archivo Excel. Corrige los errores
+                en el archivo y vuelve a cargarlo si es necesario.
               </Text>
             </div>
             <Group gap="xs">
@@ -751,7 +1150,12 @@ export const ImportModal: React.FC<ImportModalProps> = ({
           </Group>
 
           <ScrollArea style={{ height: 350 }} scrollbarSize={8} type="always">
-            <Table striped highlightOnHover withTableBorder verticalSpacing="xs">
+            <Table
+              striped
+              highlightOnHover
+              withTableBorder
+              verticalSpacing="xs"
+            >
               <thead>
                 <tr>
                   <th>Fila</th>
@@ -773,7 +1177,11 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       </Text>
                     </td>
                     <td>
-                      <Badge color={r.isValid ? "green" : "red"} variant="filled" size="sm">
+                      <Badge
+                        color={r.isValid ? "green" : "red"}
+                        variant="filled"
+                        size="sm"
+                      >
                         {r.isValid ? "Listo" : "Error"}
                       </Badge>
                     </td>
@@ -806,7 +1214,13 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       ) : (
                         <Stack gap={2}>
                           {r.errors.map((err, i) => (
-                            <Text key={i} size="xs" c="red" fw={500} style={{ lineHeight: 1.1 }}>
+                            <Text
+                              key={i}
+                              size="xs"
+                              c="red"
+                              fw={500}
+                              style={{ lineHeight: 1.1 }}
+                            >
                               • {err}
                             </Text>
                           ))}
@@ -844,8 +1258,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
       {step === "conflicts" && (
         <Stack gap="md" py="xs">
           <Text size="sm" c="dimmed">
-            Hemos encontrado registros en el Excel que ya existen en el sistema. Toma una decisión
-            para cada caso antes de guardar:
+            Hemos encontrado registros en el Excel que ya existen en el sistema.
+            Toma una decisión para cada caso antes de guardar:
           </Text>
 
           <ScrollArea style={{ height: 400 }} scrollbarSize={8} type="always">
@@ -858,7 +1272,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                       <IconUserCheck size={14} />
                     </ThemeIcon>
                     <Text fw={700} c="var(--anican-azul-oscuro)">
-                      Representantes con Cédula Registrada ({repConflicts.length})
+                      Representantes con Cédula Registrada (
+                      {repConflicts.length})
                     </Text>
                   </Group>
                   <Stack gap="sm">
@@ -867,7 +1282,10 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <Group justify="space-between" align="center">
                           <div style={{ flex: 1 }}>
                             <Text size="xs" c="dimmed">
-                              Cédula: <strong style={{ color: "black" }}>{c.cedula}</strong>
+                              Cédula:{" "}
+                              <strong style={{ color: "black" }}>
+                                {c.cedula}
+                              </strong>
                             </Text>
                             <Divider my={6} color="var(--anican-border)" />
                             <Table withColumnBorders verticalSpacing={4}>
@@ -889,7 +1307,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                           ? "var(--anican-naranja)"
                                           : "inherit",
                                       fontWeight:
-                                        c.dbData.nombres !== c.excelData.nombres ? 600 : "normal",
+                                        c.dbData.nombres !== c.excelData.nombres
+                                          ? 600
+                                          : "normal",
                                     }}
                                   >
                                     {c.excelData.nombres}
@@ -898,18 +1318,22 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                 <tr>
                                   <td>Teléfonos</td>
                                   <td>
-                                    {c.dbData.telefono_1 || "—"} / {c.dbData.telefono_2 || "—"}
+                                    {c.dbData.telefono_1 || "—"} /{" "}
+                                    {c.dbData.telefono_2 || "—"}
                                   </td>
                                   <td
                                     style={{
                                       color:
-                                        c.dbData.telefono_1 !== c.excelData.telefono_1 ||
-                                        c.dbData.telefono_2 !== c.excelData.telefono_2
+                                        c.dbData.telefono_1 !==
+                                          c.excelData.telefono_1 ||
+                                        c.dbData.telefono_2 !==
+                                          c.excelData.telefono_2
                                           ? "var(--anican-naranja)"
                                           : "inherit",
                                     }}
                                   >
-                                    {c.excelData.telefono_1 || "—"} / {c.excelData.telefono_2 || "—"}
+                                    {c.excelData.telefono_1 || "—"} /{" "}
+                                    {c.excelData.telefono_2 || "—"}
                                   </td>
                                 </tr>
                                 <tr>
@@ -918,7 +1342,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                                   <td
                                     style={{
                                       color:
-                                        c.dbData.residencia !== c.excelData.residencia
+                                        c.dbData.residencia !==
+                                        c.excelData.residencia
                                           ? "var(--anican-naranja)"
                                           : "inherit",
                                     }}
@@ -943,7 +1368,9 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                               value={c.resolution}
                               onChange={(val) => {
                                 const newConflicts = [...repConflicts];
-                                newConflicts[i].resolution = val as "UPDATE" | "KEEP_EXISTING";
+                                newConflicts[i].resolution = val as
+                                  | "UPDATE"
+                                  | "KEEP_EXISTING";
                                 setRepConflicts(newConflicts);
                               }}
                             />
@@ -972,15 +1399,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                         <Group justify="space-between" align="center">
                           <div style={{ flex: 1 }}>
                             <Text size="xs" fw={700} c="orange">
-                              Paciente: {c.excelData.nombres} {c.excelData.apellidos}
+                              Paciente: {c.excelData.nombres}{" "}
+                              {c.excelData.apellidos}
                             </Text>
                             <Text size="xs" c="dimmed">
-                              Tutor: {c.repNombres} ({c.repCedula}) | Nacimiento:{" "}
-                              {c.excelData.fecha_nacimiento}
+                              Tutor: {c.repNombres} ({c.repCedula}) |
+                              Nacimiento: {c.excelData.fecha_nacimiento}
                             </Text>
                             <Text size="xs" c="red" mt={4} fw={500}>
-                              ⚠️ Este paciente ya se encuentra registrado con ese mismo
-                              representante y fecha de nacimiento.
+                              ⚠️ Este paciente ya se encuentra registrado con
+                              ese mismo representante y fecha de nacimiento.
                             </Text>
                           </div>
                           <div style={{ width: 220, marginLeft: 16 }}>
@@ -992,12 +1420,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                               size="xs"
                               data={[
                                 { label: "Omitir Importación", value: "SKIP" },
-                                { label: "Forzar Duplicado", value: "DUPLICATE" },
+                                {
+                                  label: "Forzar Duplicado",
+                                  value: "DUPLICATE",
+                                },
                               ]}
                               value={c.resolution}
                               onChange={(val) => {
                                 const newConflicts = [...pacConflicts];
-                                newConflicts[i].resolution = val as "SKIP" | "DUPLICATE";
+                                newConflicts[i].resolution = val as
+                                  | "SKIP"
+                                  | "DUPLICATE";
                                 setPacConflicts(newConflicts);
                               }}
                             />
@@ -1008,18 +1441,51 @@ export const ImportModal: React.FC<ImportModalProps> = ({
                   </Stack>
                 </div>
               )}
+              {/* Conflictos de Diagnósticos no reconocidos */}
+              {diagConflicts.length > 0 && (
+                <div>
+                  <Group gap="xs" mb="sm" mt="md">
+                    <ThemeIcon color="orange" size="sm" radius="xl">
+                      <IconStethoscope size={14} />
+                    </ThemeIcon>
+                    <Text fw={700} c="var(--anican-azul-oscuro)">
+                      Diagnósticos no Reconocidos ({diagConflicts.length})
+                    </Text>
+                  </Group>
+                  <Stack gap="sm">
+                    {diagConflicts.map((d) => (
+                      <DiagnosisConflictCard
+                        key={d.normalizedKey}
+                        conflict={d}
+                        diagOptions={diagSelectOptions}
+                        onResolutionChange={handleDiagResolutionChange}
+                        onSelectChange={handleDiagSelectChange}
+                      />
+                    ))}
+                  </Stack>
+                </div>
+              )}
             </Stack>
           </ScrollArea>
 
           <Group justify="space-between" mt="md">
-            <MantineButton variant="subtle" color="gray" onClick={() => setStep("preview")}>
+            <MantineButton
+              variant="subtle"
+              color="gray"
+              onClick={() => setStep("preview")}
+            >
               Volver al Listado
             </MantineButton>
             <Group gap="xs">
               <Button variant="outline" color="gray" onClick={handleClose}>
                 Cancelar
               </Button>
-              <Button onClick={() => executeImport(repConflicts, pacConflicts)}>
+              <Button
+                disabled={hasUnresolvedDiags}
+                onClick={() =>
+                  executeImport(repConflicts, pacConflicts, diagConflicts)
+                }
+              >
                 Confirmar e Importar
               </Button>
             </Group>
@@ -1051,13 +1517,25 @@ export const ImportModal: React.FC<ImportModalProps> = ({
               ¡Importación Procesada con Éxito!
             </Text>
             <Text size="sm" c="dimmed" mt={4}>
-              Los registros válidos del archivo Excel han sido sincronizados con el ERP.
+              Los registros válidos del archivo Excel han sido sincronizados con
+              el ERP.
             </Text>
           </div>
 
-          <Card withBorder style={{ width: "100%", maxWidth: 400 }} radius="md" p="md" mt="sm">
+          <Card
+            withBorder
+            style={{ width: "100%", maxWidth: 400 }}
+            radius="md"
+            p="md"
+            mt="sm"
+          >
             <Stack gap="xs" style={{ textAlign: "left" }}>
-              <Text size="xs" fw={700} c="dimmed" style={{ letterSpacing: 0.5 }}>
+              <Text
+                size="xs"
+                fw={700}
+                c="dimmed"
+                style={{ letterSpacing: 0.5 }}
+              >
                 RESUMEN DE TRANSACCIONES:
               </Text>
               <Divider />

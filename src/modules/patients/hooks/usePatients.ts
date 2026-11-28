@@ -16,6 +16,7 @@ interface DbPaciente {
   nombres: string;
   apellidos: string;
   fecha_nacimiento: string;
+  edad: number | null;
   sexo: string | null;
   estado: Paciente["estado"];
   created_at?: string;
@@ -30,6 +31,7 @@ const PATIENTS_SELECT_FIELDS = `
   nombres,
   apellidos,
   fecha_nacimiento,
+  edad,
   sexo,
   estado,
   created_at,
@@ -73,6 +75,7 @@ function mapDbPatientToPatient(pac: DbPaciente): Paciente {
     nombres: pac.nombres,
     apellidos: pac.apellidos,
     fecha_nacimiento: pac.fecha_nacimiento,
+    edad: pac.edad ?? null,
     sexo: pac.sexo || undefined,
     estado: pac.estado,
     created_at: pac.created_at,
@@ -110,6 +113,15 @@ async function fetchFilteredPatients({
 
     if (filters.diagnostico && filters.diagnostico !== "Todos") {
       query = query.eq("id_diagnostico", filters.diagnostico);
+    }
+
+    if (filters.edad) {
+      if (filters.edad.min !== null && filters.edad.min !== undefined) {
+        query = query.gte("edad", filters.edad.min);
+      }
+      if (filters.edad.max !== null && filters.edad.max !== undefined) {
+        query = query.lte("edad", filters.edad.max);
+      }
     }
 
     if (
